@@ -16,9 +16,19 @@ urlpatterns = [
         name="reading_generate",
     ),
     path(
+        "manage/course/<int:course_id>/reading/regenerate/",
+        views.reading_regenerate,
+        name="reading_regenerate",
+    ),
+    path(
         "manage/course/<int:course_id>/reading/edit/",
         views.reading_edit,
         name="reading_edit",
+    ),
+    path(
+        "manage/course/<int:course_id>/reading/remove/",
+        views.reading_delete,
+        name="reading_delete",
     ),
     path(
         "manage/course/<int:course_id>/reading/preview/",

@@ -12,7 +12,7 @@ import requests
 
 from courses.services.transcript_formatting import (
     format_transcript_for_reading,
-    format_transcript_segments,
+    format_transcript_segments_with_paragraph_starts,
 )
 from courses.utils import extract_youtube_video_id as _extract_from_utils
 
@@ -221,8 +221,11 @@ def build_youtube_autofill_response(video_url: str) -> dict[str, Any]:
 
     tr = get_youtube_transcript(url)
     segments = tr.get("segments") or []
+    transcript_paragraph_starts: list[int] = []
     if segments:
-        transcript = format_transcript_segments(segments)
+        transcript, transcript_paragraph_starts = format_transcript_segments_with_paragraph_starts(
+            segments
+        )
     else:
         transcript = format_transcript_for_reading(tr.get("transcript") or "")
     transcript_source_code = tr.get("source") or ""
@@ -241,6 +244,7 @@ def build_youtube_autofill_response(video_url: str) -> dict[str, Any]:
         "youtube_description": youtube_description,
         "thumbnail_url": thumb,
         "transcript": transcript,
+        "transcript_paragraph_starts": transcript_paragraph_starts,
         "transcript_source": transcript_label,
         "transcript_source_code": transcript_source_code,
         "warnings": warnings,

@@ -48,6 +48,27 @@ class YouTubeUrlParsingTests(TestCase):
             get_youtube_thumbnail_url("https://youtu.be/n7EGz1Kn3pM?si=x"),
             "https://img.youtube.com/vi/n7EGz1Kn3pM/hqdefault.jpg",
         )
+
+    def test_training_video_youtube_embed_url_property(self):
+        from django.contrib.auth import get_user_model
+
+        User = get_user_model()
+        u = User.objects.create_user(username="embedprop", password="x")
+        c = Course.objects.create(title="C", description="", created_by=u)
+        v = TrainingVideo.objects.create(
+            course=c,
+            title="V",
+            description="",
+            video_url="https://youtu.be/n7EGz1Kn3pM?si=abc",
+        )
+        self.assertEqual(v.youtube_embed_url, "https://www.youtube.com/embed/n7EGz1Kn3pM")
+        v2 = TrainingVideo.objects.create(
+            course=c,
+            title="Other",
+            description="",
+            video_url="https://example.com/file.mp4",
+        )
+        self.assertEqual(v2.youtube_embed_url, "")
         self.assertEqual(get_youtube_thumbnail_url("https://vimeo.com/123"), "")
 
 
@@ -75,6 +96,8 @@ class YouTubeAutofillServiceTests(TestCase):
         self.assertEqual(out["title"], "Demo title")
         self.assertEqual(out["thumbnail_url"], mock_oembed.return_value["thumbnail_url"])
         self.assertEqual(out["transcript"], "hello world")
+        self.assertIn("transcript_paragraph_starts", out)
+        self.assertIsInstance(out["transcript_paragraph_starts"], list)
         self.assertEqual(out["transcript_source"], "YouTube captions")
         self.assertEqual(out["transcript_source_code"], "youtube_captions_manual_en")
         self.assertEqual(out["warnings"], [])
@@ -168,6 +191,31 @@ class TranscriptFormattingTests(TestCase):
         self.assertIn("Second sentence", out)
         self.assertIn("First sentence here.", out)
 
+    def test_segment_paragraph_starts_align_with_paragraphs(self):
+        from courses.services.transcript_formatting import (
+            format_transcript_segments,
+            format_transcript_segments_with_paragraph_starts,
+        )
+
+        segs = [
+            {"start": 0.0, "duration": 1.0, "text": "Hi."},
+            {"start": 2.0, "duration": 1.0, "text": "Bye."},
+        ]
+        plain = format_transcript_segments(segs)
+        timed, starts = format_transcript_segments_with_paragraph_starts(segs)
+        self.assertEqual(plain, timed)
+        n_para = len([p for p in plain.split("\n\n") if p.strip()])
+        self.assertEqual(len(starts), n_para)
+
+    def test_split_transcript_paragraphs_normalizes_crlf(self):
+        from courses.services.transcript_formatting import split_transcript_paragraphs
+
+        text = "First block.\r\n\r\nSecond block."
+        paras = split_transcript_paragraphs(text)
+        self.assertEqual(len(paras), 2)
+        self.assertIn("First", paras[0])
+        self.assertIn("Second", paras[1])
+
 
 class YouTubeAutofillFormattedTranscriptTests(TestCase):
     @patch("courses.services.youtube.get_youtube_transcript")
@@ -195,3 +243,84 @@ class YouTubeAutofillFormattedTranscriptTests(TestCase):
         self.assertIn("Hello", out["transcript"])
         self.assertIn("World", out["transcript"])
         self.assertIn("Hello.", out["transcript"])
+
+
+class VideoSectionsSuggestionsTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+
+        User = get_user_model()
+        self.user = User.objects.create_user(username="secfill", password="x")
+        self.course = Course.objects.create(
+            title="Course",
+            description="",
+            created_by=self.user,
+        )
+
+    def test_fallback_merges_many_paragraphs_capped(self):
+        from courses.services.section_suggestions import suggest_sections_fallback
+
+        n = 88
+        paras = [f"Paragraph {i} body." for i in range(n)]
+        starts = [i * 25 for i in range(n)]
+        secs = suggest_sections_fallback(paras, starts, title="T", duration_seconds=7200)
+        self.assertLessEqual(len(secs), 12)
+        self.assertGreaterEqual(len(secs), 3)
+
+    @patch("courses.services.section_suggestions.suggest_sections_with_ai")
+    def test_build_and_apply_with_crlf_transcript(self, mock_ai):
+        mock_ai.return_value = {"success": False, "sections": [], "error": "skip ai"}
+        from courses.services.section_suggestions import (
+            apply_suggested_sections,
+            build_section_suggestions,
+        )
+
+        v = TrainingVideo.objects.create(
+            course=self.course,
+            title="V",
+            description="",
+            video_url="",
+            transcript="",
+            transcript_paragraph_starts=[],
+        )
+        text = "Para one.\r\n\r\nPara two."
+        starts = [5, 100]
+        out = build_section_suggestions(
+            title="T",
+            video_url="",
+            transcript=text,
+            paragraph_starts=starts,
+        )
+        self.assertTrue(out["success"])
+        self.assertLessEqual(len(out["sections"]), 12)
+        n, err = apply_suggested_sections(v, out["sections"], replace=True)
+        self.assertIsNone(err)
+        self.assertGreaterEqual(n, 1)
+        self.assertEqual(v.sections.count(), n)
+
+    def test_append_rejects_when_all_rows_duplicate(self):
+        from courses.models import VideoSection
+        from courses.services.section_suggestions import apply_suggested_sections
+
+        v = TrainingVideo.objects.create(
+            course=self.course,
+            title="V",
+            description="",
+            video_url="",
+            transcript="",
+            transcript_paragraph_starts=[],
+        )
+        VideoSection.objects.create(
+            video=v,
+            title="Part A",
+            start_seconds=10,
+            end_seconds=50,
+            summary="",
+            order=0,
+        )
+        rows = [{"title": "Part A", "start_seconds": 10, "end_seconds": 50, "summary": ""}]
+        n, err = apply_suggested_sections(v, rows, replace=False)
+        self.assertEqual(n, 0)
+        self.assertIsNotNone(err)
+        self.assertIn("already", (err or "").lower())
+        self.assertEqual(v.sections.count(), 1)

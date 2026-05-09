@@ -112,7 +112,7 @@
           <p class="small text-muted">Review and edit suggestions, remove rows you do not want, then insert into the editor (does not save until you click Save quiz).</p>
           <div class="table-responsive">
             <table class="table table-sm align-middle" id="ai-suggestions-table">
-              <thead><tr><th></th><th>Question</th><th>Answers / correct</th><th>Explanation</th><th>Refs</th></tr></thead>
+              <thead><tr><th></th><th>Question</th><th>Answers / correct</th><th>Explanation</th><th>Jump (s)</th><th>Section</th><th>Refs</th></tr></thead>
               <tbody></tbody>
             </table>
           </div>
@@ -168,6 +168,16 @@
       html += '<option value="' + o.id + '"' + sel + '>' + escapeHtml(o.label) + '</option>';
     }
     return '<select class="form-select form-select-sm js-section">' + html + '</select>';
+  }
+
+  function sectionSelectAiHtml(selectedId) {
+    var html = '<option value="">— None —</option>';
+    for (var i = 0; i < sectionOptions.length; i++) {
+      var o = sectionOptions[i];
+      var sel = String(o.id) === String(selectedId == null ? '' : selectedId) ? ' selected' : '';
+      html += '<option value="' + o.id + '"' + sel + '>' + escapeHtml(o.label) + '</option>';
+    }
+    return '<select class="form-select form-select-sm js-ai-section">' + html + '</select>';
   }
 
   function answerRowHtml(a) {
@@ -514,12 +524,20 @@
       var refs = (q.source_refs || []).join(', ');
       var answersJson = '';
       try { answersJson = JSON.stringify(q.answers || [], null, 0); } catch (e) { answersJson = '[]'; }
+      var tsRaw = q.timestamp_seconds;
+      var tsStr = '';
+      if (tsRaw != null && tsRaw !== '' && !isNaN(Number(tsRaw))) {
+        tsStr = String(Math.max(0, parseInt(tsRaw, 10)));
+      }
+      var secId = q.section_id != null && q.section_id !== '' ? String(q.section_id) : '';
       var tr = document.createElement('tr');
       tr.innerHTML =
         '<td><button type="button" class="btn btn-sm btn-outline-danger js-ai-del-row">Remove</button></td>' +
         '<td><textarea class="form-control form-control-sm js-ai-q" rows="3">' + escapeHtml(q.question_text || '') + '</textarea></td>' +
         '<td><textarea class="form-control form-control-sm js-ai-a-json" rows="6" title="JSON array of {answer_text, is_correct}">' + escapeHtml(answersJson) + '</textarea></td>' +
         '<td><textarea class="form-control form-control-sm js-ai-e" rows="3">' + escapeHtml(q.explanation || '') + '</textarea></td>' +
+        '<td><input type="number" class="form-control form-control-sm js-ai-ts" min="0" step="1" placeholder="—" style="max-width: 6rem;" value="' + escapeHtml(tsStr) + '"></td>' +
+        '<td>' + sectionSelectAiHtml(secId) + '</td>' +
         '<td><input type="text" class="form-control form-control-sm js-ai-r" value="' + escapeHtml(refs) + '"></td>';
       tr.dataset.idx = String(idx);
       tb.appendChild(tr);
@@ -553,11 +571,17 @@
       }).filter(function (a) { return a.answer_text; });
       if (norm.length < 2) return;
       if (!norm.some(function (a) { return a.is_correct; })) norm[0].is_correct = true;
+      var tsEl = tr.querySelector('.js-ai-ts');
+      var tsParsed = tsEl && tsEl.value !== '' ? parseInt(tsEl.value, 10) : null;
+      if (tsParsed !== null && (isNaN(tsParsed) || tsParsed < 0)) tsParsed = null;
+      var secEl = tr.querySelector('.js-ai-section');
+      var secParsed = secEl && secEl.value ? parseInt(secEl.value, 10) : null;
+      if (secParsed !== null && isNaN(secParsed)) secParsed = null;
       newQs.push({
         question_text: qtext,
         explanation: expl,
-        timestamp_seconds: null,
-        section_id: null,
+        timestamp_seconds: tsParsed,
+        section_id: secParsed,
         source_refs: refs,
         answers: norm
       });

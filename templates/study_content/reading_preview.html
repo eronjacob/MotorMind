@@ -1,5 +1,26 @@
 {% extends "base.html" %}
 {% block title %}Reading preview — {{ course.title }}{% endblock %}
+{% block extra_head %}
+<style>
+.reading-page-title {
+  font-size: clamp(1.4rem, 2.2vw, 1.9rem);
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--bs-heading-color, inherit);
+}
+.reading-body h2 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+.reading-body h3 {
+  font-size: 1.02rem;
+  font-weight: 600;
+  margin-top: 1rem;
+}
+</style>
+{% endblock %}
 {% block content %}
 <nav aria-label="breadcrumb">
   <ol class="breadcrumb">
@@ -8,29 +29,18 @@
   </ol>
 </nav>
 <div class="d-flex justify-content-between align-items-center mb-3">
-  <h1 class="h4 mb-0">{{ page.title|default:"Reading" }}</h1>
+  <h1 class="reading-page-title mb-0">{{ page.title|default:"Reading" }}</h1>
   <a class="btn btn-sm btn-outline-secondary" href="{% url 'study_content:reading_edit' course.pk %}">Back to editor</a>
 </div>
 <div class="card shadow-sm">
   <div class="card-body reading-body-host">
     <div id="reading-public-body" class="reading-body">{{ reading_html_safe|safe }}</div>
-    {% if page.citations %}
+    {% if reading_sources_display %}
       <hr>
       <h2 class="h6">Sources</h2>
       <ul class="small mb-0">
-        {% for c in page.citations %}
-          <li>
-            {% if c.surname %}
-              <abbr class="reading-cite{% if c.type == 'video' %} reading-cite--video{% endif %}" title="{{ c.hover_title|default:''|escape }}">{{ c.surname }}</abbr>
-              {% if c.source_title %}<span class="text-muted"> — {{ c.source_title }}</span>{% endif %}
-            {% elif c.type == "book" %}
-              <strong>{{ c.id|default:"—" }}</strong>
-              — {{ c.source_title|default:"" }} {% if c.author %}({{ c.author }}){% endif %}
-              {% if c.page_number %}p. {{ c.page_number }}{% endif %}
-            {% elif c.type == "video" %}
-              — Video: {{ c.video_title|default:"" }}
-            {% endif %}
-          </li>
+        {% for c in reading_sources_display %}
+          <li>[{{ c.id|default:"—" }}] {{ c.label|default:"" }}.</li>
         {% endfor %}
       </ul>
     {% endif %}
@@ -43,7 +53,7 @@
 .reading-cite--video { font-style: italic; }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-{{ page.diagrams|default_if_none:''|json_script:"reading-diagrams-data" }}
+{{ reading_diagrams_display|default_if_none:''|json_script:"reading-diagrams-data" }}
 <script>
 (function () {
   mermaid.initialize({ startOnLoad: false, theme: 'neutral' });
@@ -58,13 +68,24 @@
     var id = slot.getAttribute('data-diagram-id');
     var d = diagrams.find(function (x) { return x && x.id === id; });
     if (!d || !d.code) return;
-    var pre = document.createElement('pre');
-    pre.className = 'mermaid';
-    pre.textContent = d.code;
+    var box = document.createElement('div');
+    box.className = 'mermaid';
+    box.textContent = d.code;
     slot.innerHTML = '';
-    slot.appendChild(pre);
+    slot.appendChild(box);
   });
-  try { mermaid.run({ querySelector: '#reading-public-body .mermaid' }); } catch (e) {}
+  try {
+    var run = mermaid.run({ querySelector: '#reading-public-body .mermaid' });
+    if (run && typeof run.then === 'function') {
+      run.catch(function () {
+        host.querySelectorAll('[data-diagram-id] .mermaid').forEach(function (el) {
+          if (!el.querySelector('svg')) {
+            el.innerHTML = '<p class="small text-muted mb-0">Diagram could not be rendered.</p>';
+          }
+        });
+      });
+    }
+  } catch (e) {}
 })();
 </script>
 {% endblock %}

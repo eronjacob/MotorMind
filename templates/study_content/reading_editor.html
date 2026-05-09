@@ -1,5 +1,26 @@
 {% extends "base.html" %}
 {% block title %}Edit reading — {{ course.title }}{% endblock %}
+{% block extra_head %}
+<style>
+.reading-page-title {
+  font-size: clamp(1.4rem, 2.2vw, 1.9rem);
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--bs-heading-color, inherit);
+}
+.reading-body h2 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+.reading-body h3 {
+  font-size: 1.02rem;
+  font-weight: 600;
+  margin-top: 1rem;
+}
+</style>
+{% endblock %}
 {% block content %}
 <nav aria-label="breadcrumb">
   <ol class="breadcrumb">
@@ -11,6 +32,11 @@
 
 <h1 class="h3 mb-3">Course reading editor</h1>
 <p class="text-muted small">Edit HTML for the student-facing Reading section. Preview uses the same diagram pipeline as the public course page. <!-- TODO: drag-and-drop diagram blocks in preview. --></p>
+{% if mermaid_warnings %}
+  {% for w in mermaid_warnings %}
+  <div class="alert alert-warning py-2 small mb-3" role="alert">{{ w }}</div>
+  {% endfor %}
+{% endif %}
 
 <form method="post" id="reading-editor-form" class="mb-4">
   {% csrf_token %}
@@ -34,6 +60,7 @@
     <div class="col-lg-6">
       <label class="form-label">Live preview</label>
       <div class="border rounded p-3 bg-light reading-preview-host" style="min-height: 420px; max-height: 70vh; overflow: auto;">
+        <div id="reading-preview-title" class="reading-page-title mb-2">{{ page.title }}</div>
         <div id="reading-preview-body" class="reading-body"></div>
       </div>
     </div>
@@ -69,10 +96,16 @@
     </div>
   </div>
 
-  <div class="mt-3 d-flex flex-wrap gap-2">
+  <div class="mt-3 d-flex flex-wrap gap-2 align-items-center">
     <button type="submit" class="btn btn-primary">Save reading</button>
     <a class="btn btn-outline-secondary" href="{{ back_url }}">Back to course editor</a>
     <a class="btn btn-outline-primary" href="{% url 'study_content:reading_preview' course.pk %}" target="_blank" rel="noopener">Preview as student</a>
+    {% if page.pk %}
+    <form method="post" action="{% url 'study_content:reading_delete' course.pk %}" class="d-inline ms-auto" onsubmit="return confirm('Remove the reading from this course? Students will no longer see it on the course page. This cannot be undone.');">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-outline-danger">Remove reading</button>
+    </form>
+    {% endif %}
   </div>
 </form>
 {% endblock %}
@@ -85,6 +118,17 @@
   var ta = document.getElementById('id_content_html');
   var prev = document.getElementById('reading-preview-body');
   var diaTa = document.getElementById('id_diagrams_json');
+  var titleIn = document.getElementById('id_title');
+  var titlePrev = document.getElementById('reading-preview-title');
+
+  function syncPreviewTitle() {
+    if (titlePrev && titleIn) {
+      var v = (titleIn.value || '').trim();
+      titlePrev.textContent = v || 'Reading';
+    }
+  }
+  if (titleIn) titleIn.addEventListener('input', syncPreviewTitle);
+  syncPreviewTitle();
 
   function parseDiagrams() {
     try {
@@ -99,13 +143,24 @@
       var id = slot.getAttribute('data-diagram-id');
       var d = diagrams.find(function (x) { return x && x.id === id; });
       if (!d || !d.code) return;
-      var pre = document.createElement('pre');
-      pre.className = 'mermaid';
-      pre.textContent = d.code;
+      var box = document.createElement('div');
+      box.className = 'mermaid';
+      box.textContent = d.code;
       slot.innerHTML = '';
-      slot.appendChild(pre);
+      slot.appendChild(box);
     });
-    try { mermaid.run({ querySelector: '#reading-preview-body .mermaid' }); } catch (e) {}
+    try {
+      var run = mermaid.run({ querySelector: '#reading-preview-body .mermaid' });
+      if (run && typeof run.then === 'function') {
+        run.catch(function () {
+          prev.querySelectorAll('[data-diagram-id] .mermaid').forEach(function (el) {
+            if (!el.querySelector('svg')) {
+              el.innerHTML = '<p class="small text-danger mb-0">Diagram error — check diagrams JSON or regenerate reading.</p>';
+            }
+          });
+        });
+      }
+    } catch (e) {}
   }
 
   function runPreview() {

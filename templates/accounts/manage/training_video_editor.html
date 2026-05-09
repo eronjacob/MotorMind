@@ -59,6 +59,111 @@
             {% if form.transcript.help_text %}<div class="form-text">{{ form.transcript.help_text }}</div>{% endif %}
             {% for err in form.transcript.errors %}<div class="text-danger small">{{ err }}</div>{% endfor %}
           </div>
+          {{ form.transcript_paragraph_starts }}
+          {% for err in form.transcript_paragraph_starts.errors %}<div class="text-danger small">{{ err }}</div>{% endfor %}
+
+          <div class="card border mb-3" id="paragraph-timing-preview-wrap">
+            <div class="card-header py-2 small fw-semibold">Paragraph caption start times (preview)</div>
+            <div class="card-body py-2">
+              <p class="small text-muted mb-2" id="paragraph-timing-note">
+                Each row is one transcript paragraph (blank line separated) and its caption start second. These timestamps are reference boundaries for “Suggest learning sections” (not one section per row).
+              </p>
+              <div class="d-flex flex-wrap align-items-center gap-2 mb-2" id="timestamp-toolbar-row">
+                <span class="small text-muted" id="timestamp-count-line"></span>
+                <div id="timestamp-toolbar-collapsed">
+                  <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-timestamps-expand">Show all timestamps</button>
+                </div>
+                <div id="timestamp-toolbar-expanded" class="d-none">
+                  <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-timestamps-collapse">Collapse timestamps</button>
+                </div>
+              </div>
+              <div class="table-responsive" id="paragraph-timing-table-responsive">
+                <table class="table table-sm table-bordered mb-0 align-middle">
+                  <thead class="table-light">
+                    <tr>
+                      <th scope="col" class="text-nowrap">#</th>
+                      <th scope="col" class="text-nowrap">Start (s)</th>
+                      <th scope="col">Preview label (from transcript)</th>
+                    </tr>
+                  </thead>
+                  <tbody id="paragraph-timing-tbody">
+                    {% for row in paragraph_timing_preview %}
+                      <tr>
+                        <td>{{ row.index }}</td>
+                        <td class="text-nowrap">{{ row.start_seconds }}</td>
+                        <td class="small">{{ row.label }}</td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          {% if video and video.pk %}
+          <div class="card border mb-3">
+            <div class="card-body">
+              <h2 class="h6 mb-2 fw-semibold">Saved video sections</h2>
+              <p class="small text-muted mb-2">Stored sections for this video (e.g. quiz “Linked video section”).</p>
+              <div class="table-responsive mb-0">
+                <table class="table table-sm table-bordered mb-0 align-middle">
+                  <thead class="table-light">
+                    <tr>
+                      <th scope="col">Section label</th>
+                      <th scope="col" class="text-nowrap">Start (s)</th>
+                      <th scope="col" class="text-nowrap">End (s)</th>
+                      <th scope="col">Summary</th>
+                    </tr>
+                  </thead>
+                  <tbody id="video-sections-tbody">
+                    {% for s in video_sections %}
+                      <tr>
+                        <td class="small">{{ s.title }}</td>
+                        <td class="text-nowrap">{{ s.start_seconds }}</td>
+                        <td class="text-nowrap">{{ s.end_seconds }}</td>
+                        <td class="small text-muted">{{ s.summary|default:"—"|truncatechars:80 }}</td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          {% endif %}
+
+          {% if sections_suggest_url %}
+          <div class="card border mb-3">
+            <div class="card-body">
+              <h2 class="h6 mb-2 fw-semibold">Suggested learning sections</h2>
+              <p class="small text-muted mb-2">
+                Proposes a small number of teaching sections (max 12) with readable titles. Uses Google AI when configured; otherwise a built-in layout from your timestamps.
+              </p>
+              {% if not sections_apply_url %}
+              <p class="small text-muted mb-2">Save the video once to attach these suggestions to the course. Replace and add buttons stay disabled until the video exists.</p>
+              {% endif %}
+              <div class="d-flex flex-wrap gap-2 mb-2">
+                <button type="button" class="btn btn-sm btn-primary" id="btn-suggest-sections" data-suggest-url="{{ sections_suggest_url|default:'' }}" data-apply-url="{{ sections_apply_url|default:'' }}">Suggest learning sections</button>
+                <button type="button" class="btn btn-sm btn-outline-danger" id="btn-replace-sections" disabled>Replace existing sections with suggestions</button>
+                <button type="button" class="btn btn-sm btn-outline-primary" id="btn-add-selected-sections" disabled>Add selected sections</button>
+              </div>
+              <p class="small mb-2" id="suggest-source-note" aria-live="polite"></p>
+              <div class="table-responsive d-none" id="suggested-sections-wrap">
+                <table class="table table-sm table-bordered align-middle mb-0">
+                  <thead class="table-light">
+                    <tr>
+                      <th scope="col" class="text-nowrap" style="width:2.5rem"><span class="visually-hidden">Include</span></th>
+                      <th scope="col">Title</th>
+                      <th scope="col" class="text-nowrap" style="width:6rem">Start (s)</th>
+                      <th scope="col" class="text-nowrap" style="width:6rem">End (s)</th>
+                      <th scope="col">Summary</th>
+                    </tr>
+                  </thead>
+                  <tbody id="suggested-sections-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          {% endif %}
           {{ form.thumbnail_url }}
           {{ form.transcript_source }}
           {% for err in form.thumbnail_url.errors %}<div class="text-danger small">{{ err }}</div>{% endfor %}
@@ -126,6 +231,134 @@
     return document.getElementById('id_' + idPart);
   }
 
+  function splitTranscriptParagraphs(text) {
+    var t = (text || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    if (!t.trim()) return [];
+    return t.split(/\n\n/).map(function (p) { return p.trim(); }).filter(Boolean);
+  }
+
+  function parseParagraphStarts() {
+    var el = field('transcript_paragraph_starts');
+    if (!el || !String(el.value).trim()) return [];
+    try {
+      var v = JSON.parse(el.value);
+      return Array.isArray(v) ? v : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  var timestampsExpanded = false;
+
+  function updateTimestampToolbar() {
+    var tb = document.getElementById('paragraph-timing-tbody');
+    if (!tb) return;
+    var rows = tb.querySelectorAll('tr');
+    var total = rows.length;
+    var countLine = document.getElementById('timestamp-count-line');
+    var collapsed = document.getElementById('timestamp-toolbar-collapsed');
+    var expanded = document.getElementById('timestamp-toolbar-expanded');
+    if (!countLine) return;
+    if (total <= 3) {
+      timestampsExpanded = true;
+      rows.forEach(function (tr) { tr.classList.remove('d-none'); });
+      countLine.textContent = total === 0 ? '' : ('Showing all ' + total + ' timestamp(s).');
+      if (collapsed) collapsed.classList.add('d-none');
+      if (expanded) expanded.classList.add('d-none');
+      return;
+    }
+    rows.forEach(function (tr) {
+      if (!timestampsExpanded && tr.classList.contains('timestamp-extra')) {
+        tr.classList.add('d-none');
+      } else {
+        tr.classList.remove('d-none');
+      }
+    });
+    if (!timestampsExpanded) {
+      countLine.textContent = 'Showing 3 of ' + total + ' timestamps.';
+      if (collapsed) collapsed.classList.remove('d-none');
+      if (expanded) expanded.classList.add('d-none');
+    } else {
+      countLine.textContent = 'Showing all ' + total + ' timestamps.';
+      if (collapsed) collapsed.classList.add('d-none');
+      if (expanded) expanded.classList.remove('d-none');
+    }
+  }
+
+  function refreshParagraphTimingPreview() {
+    var tb = document.getElementById('paragraph-timing-tbody');
+    var note = document.getElementById('paragraph-timing-note');
+    if (!tb) return;
+    var paras = splitTranscriptParagraphs((field('transcript') && field('transcript').value) || '');
+    var starts = parseParagraphStarts();
+    tb.innerHTML = '';
+    var ok = paras.length > 0 && starts.length === paras.length;
+    if (note) {
+      if (!paras.length) {
+        note.textContent = 'Add a transcript (paragraphs separated by a blank line). Use Auto-fill from YouTube to attach caption start times per paragraph.';
+      } else if (starts.length === 0) {
+        note.textContent = 'No caption timestamps loaded yet — use “Auto-fill title and transcript” from YouTube, or timestamps were cleared because paragraph breaks changed.';
+      } else if (!ok) {
+        note.textContent = 'Mismatch: ' + paras.length + ' paragraph(s) in the transcript vs ' + starts.length + ' timestamp(s). Match blank-line breaks or run Auto-fill again.';
+      } else {
+        note.textContent = 'Timestamps align with transcript paragraphs. Use them as anchors for suggested learning sections.';
+      }
+    }
+    if (!ok) {
+      timestampsExpanded = false;
+      updateTimestampToolbar();
+      return;
+    }
+    for (var i = 0; i < paras.length; i++) {
+      var tr = document.createElement('tr');
+      if (i >= 3) tr.classList.add('timestamp-extra');
+      var label = paras[i].replace(/\n/g, ' ').trim();
+      if (label.length > 80) label = label.slice(0, 80) + '…';
+      var sn = parseInt(starts[i], 10);
+      if (isNaN(sn)) sn = 0;
+      var td0 = document.createElement('td');
+      td0.textContent = String(i + 1);
+      var td1 = document.createElement('td');
+      td1.className = 'text-nowrap';
+      td1.textContent = String(sn);
+      var td2 = document.createElement('td');
+      td2.className = 'small';
+      td2.textContent = label;
+      tr.appendChild(td0);
+      tr.appendChild(td1);
+      tr.appendChild(td2);
+      tb.appendChild(tr);
+    }
+    timestampsExpanded = false;
+    updateTimestampToolbar();
+  }
+
+  var btnExpandTs = document.getElementById('btn-timestamps-expand');
+  var btnCollapseTs = document.getElementById('btn-timestamps-collapse');
+  if (btnExpandTs) {
+    btnExpandTs.addEventListener('click', function () {
+      timestampsExpanded = true;
+      updateTimestampToolbar();
+      var wrap = document.getElementById('paragraph-timing-preview-wrap');
+      if (wrap) wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
+  if (btnCollapseTs) {
+    btnCollapseTs.addEventListener('click', function () {
+      timestampsExpanded = false;
+      updateTimestampToolbar();
+      var wrap = document.getElementById('paragraph-timing-preview-wrap');
+      if (wrap) wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
+
+  var trField = field('transcript');
+  if (trField) {
+    trField.addEventListener('input', refreshParagraphTimingPreview);
+    trField.addEventListener('change', refreshParagraphTimingPreview);
+  }
+  refreshParagraphTimingPreview();
+
   var urlAutofill = "{% url 'accounts:video_youtube_autofill' %}";
   var urlAi = "{% url 'accounts:video_ai_description' %}";
   var urlAiTitle = "{% url 'accounts:video_ai_title' %}";
@@ -165,6 +398,11 @@
           field('youtube_description').value = data.youtube_description != null ? data.youtube_description : '';
         }
         if (field('transcript')) field('transcript').value = data.transcript != null ? data.transcript : '';
+        var tpsEl = field('transcript_paragraph_starts');
+        if (tpsEl) {
+          var arr = data.transcript_paragraph_starts;
+          tpsEl.value = JSON.stringify(Array.isArray(arr) ? arr : []);
+        }
         if (field('thumbnail_url')) field('thumbnail_url').value = data.thumbnail_url || '';
         if (field('transcript_source')) field('transcript_source').value = data.transcript_source_code || '';
         var note = document.getElementById('transcript-source-note');
@@ -186,6 +424,7 @@
         (data.warnings || []).forEach(function (w) {
           showAlert('warning', w);
         });
+        refreshParagraphTimingPreview();
         showAlert('success', 'Auto-fill finished. Review fields before saving.');
       })
       .catch(function (err) {
@@ -271,6 +510,286 @@
         showAlert('danger', 'Network error while contacting the server.' + extra);
       });
   });
+
+  function renderSavedVideoSectionsRows(sections) {
+    var secTb = document.getElementById('video-sections-tbody');
+    if (!secTb) return;
+    secTb.innerHTML = '';
+    (sections || []).forEach(function (s) {
+      var tr = document.createElement('tr');
+      var tda = document.createElement('td');
+      tda.className = 'small';
+      tda.textContent = s.title || '';
+      var tdb = document.createElement('td');
+      tdb.className = 'text-nowrap';
+      tdb.textContent = String(s.start_seconds != null ? s.start_seconds : '');
+      var tdc = document.createElement('td');
+      tdc.className = 'text-nowrap';
+      tdc.textContent = String(s.end_seconds != null ? s.end_seconds : '');
+      var tdd = document.createElement('td');
+      tdd.className = 'small text-muted';
+      var sm = (s.summary || '').trim();
+      tdd.textContent = sm ? (sm.length > 80 ? sm.slice(0, 80) + '…' : sm) : '—';
+      tr.appendChild(tda);
+      tr.appendChild(tdb);
+      tr.appendChild(tdc);
+      tr.appendChild(tdd);
+      secTb.appendChild(tr);
+    });
+  }
+
+  function buildSuggestPayload() {
+    return {
+      title: (field('title') && field('title').value) || '',
+      video_url: (field('video_url') && field('video_url').value) || '',
+      transcript: (field('transcript') && field('transcript').value) || '',
+      transcript_paragraph_starts: parseParagraphStarts()
+    };
+  }
+
+  function fillSuggestedSectionsTable(sections) {
+    var wrap = document.getElementById('suggested-sections-wrap');
+    var tbody = document.getElementById('suggested-sections-tbody');
+    if (!wrap || !tbody) return;
+    tbody.innerHTML = '';
+    (sections || []).forEach(function (s) {
+      var tr = document.createElement('tr');
+      var td0 = document.createElement('td');
+      var cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.className = 'form-check-input js-sel-section';
+      cb.checked = true;
+      td0.appendChild(cb);
+      tr.appendChild(td0);
+      var tdT = document.createElement('td');
+      var inT = document.createElement('input');
+      inT.type = 'text';
+      inT.className = 'form-control form-control-sm js-s-title';
+      inT.value = s.title || '';
+      tdT.appendChild(inT);
+      tr.appendChild(tdT);
+      var tdS = document.createElement('td');
+      var inS = document.createElement('input');
+      inS.type = 'number';
+      inS.min = '0';
+      inS.step = '1';
+      inS.className = 'form-control form-control-sm js-s-start_seconds';
+      inS.value = String(s.start_seconds != null ? s.start_seconds : '');
+      tdS.appendChild(inS);
+      tr.appendChild(tdS);
+      var tdE = document.createElement('td');
+      var inE = document.createElement('input');
+      inE.type = 'number';
+      inE.min = '0';
+      inE.step = '1';
+      inE.className = 'form-control form-control-sm js-s-end_seconds';
+      inE.value = String(s.end_seconds != null ? s.end_seconds : '');
+      tdE.appendChild(inE);
+      tr.appendChild(tdE);
+      var tdSm = document.createElement('td');
+      var inSm = document.createElement('input');
+      inSm.type = 'text';
+      inSm.className = 'form-control form-control-sm js-s-summary';
+      inSm.value = s.summary || '';
+      tdSm.appendChild(inSm);
+      tr.appendChild(tdSm);
+      tbody.appendChild(tr);
+    });
+    wrap.classList.remove('d-none');
+  }
+
+  function gatherSuggestedFromTable(selectedOnly) {
+    var tbody = document.getElementById('suggested-sections-tbody');
+    if (!tbody) return [];
+    var out = [];
+    tbody.querySelectorAll('tr').forEach(function (tr) {
+      var cb = tr.querySelector('.js-sel-section');
+      if (selectedOnly && (!cb || !cb.checked)) return;
+      var titleEl = tr.querySelector('.js-s-title');
+      var stEl = tr.querySelector('.js-s-start_seconds');
+      var enEl = tr.querySelector('.js-s-end_seconds');
+      var smEl = tr.querySelector('.js-s-summary');
+      var title = titleEl ? titleEl.value.trim() : '';
+      var st = stEl ? parseInt(stEl.value, 10) : NaN;
+      var en = enEl ? parseInt(enEl.value, 10) : NaN;
+      var summary = smEl ? smEl.value.trim() : '';
+      if (!title) return;
+      if (isNaN(st)) st = 0;
+      if (isNaN(en)) en = st + 30;
+      out.push({
+        title: title,
+        start_seconds: st,
+        end_seconds: Math.max(st + 1, en),
+        summary: summary
+      });
+    });
+    return out;
+  }
+
+  var btnSuggest = document.getElementById('btn-suggest-sections');
+  var btnReplace = document.getElementById('btn-replace-sections');
+  var btnAddSel = document.getElementById('btn-add-selected-sections');
+  if (btnSuggest) {
+    var suggestUrl = (btnSuggest.getAttribute('data-suggest-url') || '').trim();
+    var applyUrl = (btnSuggest.getAttribute('data-apply-url') || '').trim();
+    var addSectionsBatchApplied = false;
+
+    function setAddSelectedButtonState() {
+      if (!btnAddSel) return;
+      if (!applyUrl) {
+        btnAddSel.disabled = true;
+        btnAddSel.classList.add('btn-outline-primary');
+        btnAddSel.classList.remove('btn-secondary');
+        btnAddSel.removeAttribute('title');
+        return;
+      }
+      btnAddSel.disabled = addSectionsBatchApplied;
+      if (addSectionsBatchApplied) {
+        btnAddSel.classList.remove('btn-outline-primary');
+        btnAddSel.classList.add('btn-secondary');
+        btnAddSel.setAttribute('title', 'This suggestion batch was already added. Click “Suggest learning sections” again to refresh suggestions before adding again.');
+      } else {
+        btnAddSel.classList.add('btn-outline-primary');
+        btnAddSel.classList.remove('btn-secondary');
+        btnAddSel.removeAttribute('title');
+      }
+    }
+
+    if (!suggestUrl) btnSuggest.disabled = true;
+    setAddSelectedButtonState();
+    btnSuggest.addEventListener('click', function () {
+      if (!suggestUrl) return;
+      clearAlerts();
+      btnSuggest.disabled = true;
+      fetch(suggestUrl, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify(buildSuggestPayload())
+      }).then(function (r) {
+        return r.text().then(function (text) {
+          return { ok: r.ok, status: r.status, data: parseJsonResponse(r, text) };
+        });
+      }).then(function (res) {
+        btnSuggest.disabled = false;
+        var data = res.data;
+        if (!res.ok || !data.success) {
+          showAlert('danger', (data && data.error) ? data.error : ('Suggest failed (HTTP ' + res.status + ').'));
+          return;
+        }
+        addSectionsBatchApplied = false;
+        fillSuggestedSectionsTable(data.sections || []);
+        var note = document.getElementById('suggest-source-note');
+        if (note) {
+          if (data.source === 'ai') {
+            note.className = 'small mb-2 text-success';
+            note.textContent = 'Suggestions from AI: ' + (data.sections || []).length + ' section(s) (max 12).';
+          } else {
+            note.className = 'small mb-2 text-warning';
+            note.textContent = 'Built-in layout: ' + ((data.error && String(data.error).trim()) || 'AI unavailable or not configured.');
+          }
+        }
+        if (btnReplace) btnReplace.disabled = !applyUrl;
+        setAddSelectedButtonState();
+      }).catch(function (err) {
+        btnSuggest.disabled = false;
+        var extra = err && err.message ? ' ' + err.message : '';
+        showAlert('danger', 'Network error while contacting the server.' + extra);
+      });
+    });
+
+    if (btnReplace) {
+      btnReplace.addEventListener('click', function () {
+        if (!applyUrl) return;
+        var rows = gatherSuggestedFromTable(false);
+        if (!rows.length) {
+          showAlert('warning', 'Click “Suggest learning sections” first.');
+          return;
+        }
+        if (!window.confirm('This will delete all existing sections for this video and replace them with the suggested sections in the table. Continue?')) return;
+        clearAlerts();
+        btnReplace.disabled = true;
+        fetch(applyUrl, {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+          },
+          body: JSON.stringify({ mode: 'replace', confirm: true, sections: rows })
+        }).then(function (r) {
+          return r.text().then(function (text) {
+            return { ok: r.ok, data: parseJsonResponse(r, text) };
+          });
+        }).then(function (res) {
+          btnReplace.disabled = false;
+          var data = res.data;
+          if (!res.ok || !data.success) {
+            showAlert('danger', (data && data.error) ? data.error : 'Apply failed.');
+            return;
+          }
+          addSectionsBatchApplied = false;
+          renderSavedVideoSectionsRows(data.sections);
+          showAlert('success', 'Replaced with ' + (data.created || 0) + ' section(s).');
+          if (btnReplace) btnReplace.disabled = !applyUrl;
+          setAddSelectedButtonState();
+        }).catch(function (err) {
+          btnReplace.disabled = false;
+          var extra = err && err.message ? ' ' + err.message : '';
+          showAlert('danger', 'Network error while contacting the server.' + extra);
+        });
+      });
+    }
+
+    if (btnAddSel) {
+      btnAddSel.addEventListener('click', function () {
+        if (!applyUrl) return;
+        var rows = gatherSuggestedFromTable(true);
+        if (!rows.length) {
+          showAlert('warning', 'Tick at least one checkbox in the suggested sections table.');
+          return;
+        }
+        clearAlerts();
+        btnAddSel.disabled = true;
+        fetch(applyUrl, {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+          },
+          body: JSON.stringify({ mode: 'append', sections: rows })
+        }).then(function (r) {
+          return r.text().then(function (text) {
+            return { ok: r.ok, data: parseJsonResponse(r, text) };
+          });
+        }).then(function (res) {
+          var data = res.data;
+          if (!res.ok || !data.success) {
+            var msg = (data && data.error) ? data.error : 'Add failed.';
+            showAlert('danger', msg);
+            if (String(msg).toLowerCase().indexOf('already') !== -1) {
+              addSectionsBatchApplied = true;
+            }
+            setAddSelectedButtonState();
+            return;
+          }
+          addSectionsBatchApplied = true;
+          setAddSelectedButtonState();
+          renderSavedVideoSectionsRows(data.sections);
+          var added = data.created != null ? data.created : rows.length;
+          showAlert('success', 'Added ' + added + ' section(s). Saved list refreshed.');
+        }).catch(function (err) {
+          setAddSelectedButtonState();
+          var extra = err && err.message ? ' ' + err.message : '';
+          showAlert('danger', 'Network error while contacting the server.' + extra);
+        });
+      });
+    }
+  }
 })();
 </script>
 {% endblock %}

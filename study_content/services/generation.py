@@ -7,15 +7,16 @@ from __future__ import annotations
 import json
 import logging
 import os
-from typing import Any
 
 from courses.models import Course, TrainingVideo
-from study_content.citation_format import (
-    citations_json_from_chunks,
-    replace_label_citations_in_html,
-    video_transcript_hover_title,
-)
+from study_content.mermaid_sanitize import normalize_diagrams_list
 from study_content.models import CourseReadingContext, CourseReadingPage
+from study_content.reading_citations import (
+    build_reading_citations_json,
+    build_video_citation_specs,
+    postprocess_reading_html,
+    replace_citation_labels_in_html,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +24,28 @@ logger = logging.getLogger(__name__)
 def _snippet(text: str, limit: int = 3500) -> str:
     t = (text or "").strip()
     return t[:limit] if len(t) > limit else t
+
+
+def _book_refs_text(chunks: list) -> str:
+    lines = []
+    for c in chunks:
+        from study_content.reading_citations import book_source_display_line
+
+        lab = (c.citation_label or "").strip()
+        lines.append(
+            f"- [{lab}] label={book_source_display_line(c)!r} "
+            f"author={c.author!r} page_number={c.page_number!r} chunk_index={c.chunk_index!r}\n"
+            f"  excerpt: {_snippet(c.chunk_text, 1200)!r}"
+        )
+    return "\n".join(lines)
+
+
+def _video_refs_text(specs: list[dict]) -> str:
+    if not specs:
+        return "(No video timing segments — cite video only as [V1] if a single block is provided.)"
+    import json as _json
+
+    return _json.dumps(specs, indent=2)
 
 
 def generate_course_reading(
@@ -49,49 +72,50 @@ def generate_course_reading(
             "No saved source chunks for this context. Run “Find top 5 chunks” first."
         )
 
-    video = context.video
-    if video:
-        v_title = video.title
-        transcript = _snippet(video.transcript or "")
+    video = context.video or course.videos.order_by("created_at").first()
+    if context.video:
+        v_title = context.video.title
+        transcript = _snippet(context.video.transcript or "")
     else:
         v_title = "Course videos (combined)"
         transcript = _snippet(context.query_text)
 
-    chunk_blocks = []
-    for c in chunks:
-        rt = c.resource_title or c.source_title or ""
-        chunk_blocks.append(
-            f"- [{c.citation_label}] resource_id={c.resource_id or 'n/a'} "
-            f"title={rt!r} author={c.author!r} page={c.page_number} "
-            f"vector_id={c.vector_id!r}\n  excerpt: {_snippet(c.chunk_text, 1200)!r}"
-        )
-    chunks_text = "\n".join(chunk_blocks)
+    video_specs = build_video_citation_specs(video)
+    book_refs = _book_refs_text(chunks)
+    video_refs = _video_refs_text(video_specs)
 
     prompt = (
         "You are an automotive / technical education author writing a BBC Bitesize-style reading. "
-        "Use ONLY the transcript excerpt and numbered book excerpts below. "
-        "Do not copy long passages; paraphrase in your own words. "
-        "Cite book claims using ONLY the bracket labels [B1], [B2], … exactly as listed below (one per excerpt). "
-        "Cite the transcript using [V1]. These placeholders will be turned into author surnames with hover details for students. "
+        "Use ONLY the transcript excerpt and the book/video source definitions below. "
+        "Every factual claim must be cited using ONLY the bracket ids provided: [B1], [B2], … for books and "
+        "[V1], [V2], … for video time segments. "
+        "Never write naked author surnames (e.g. 'Denton') or the word 'Video' as a citation — always use [B#] or [V#]. "
+        "Do not invent citation ids; use only ids listed below. "
+        "Do not add a 'Sources' or 'References' section in content_html — the application renders Sources automatically. "
         "Include: a short introduction, main sections, a “Key takeaways” section, and a “Common mistakes” section. "
-        "Include at least one simple Mermaid diagram when it helps (e.g. flowchart LR). "
+        "Include at least one Mermaid flowchart when it helps. "
+        "Mermaid rules (must follow — invalid diagrams are discarded):\n"
+        '- First line must be exactly: flowchart TD\n'
+        "- Use only simple node ids: A, B, C, D, E, F, … (single letters or A1 style if needed).\n"
+        '- Every node label must be double-quoted inside brackets or braces, e.g. A["Short label"] and D{"Question text"}.\n'
+        '- Use only ASCII letters, spaces, commas, and periods inside labels; write "and" instead of "&".\n'
+        '- For labeled edges use: A -- "Yes" --> B (never A -->|Yes| B).\n'
+        "- Do not use semicolons at ends of lines. Do not use markdown ``` fences.\n"
+        "- Do not use End, Done, or graph as a node id.\n"
         "In content_html, place each diagram using "
         '<div data-diagram-id=\"DIAGRAM_ID\" class=\"reading-diagram float-end\"></div> '
         "where DIAGRAM_ID matches an entry in the diagrams array. "
         "Return STRICT JSON only with this shape:\n"
         '{"title": string, "summary": string, "content_html": string, '
-        '"citations": ['
-        '{"id": string, "type": "book"|"video", "source_title": string, "author": string, '
-        '"page_number": number|null, "vector_id": string, "resource_id": number|null, '
-        '"video_title": string|null, "timestamp": null}], '
         '"diagrams": ['
         '{"id": string, "title": string, "type": "mermaid", "code": string, "caption": string}'
         "]}\n\n"
         f"Course title: {course.title}\n"
         f"Course description: {_snippet(course.description or '', 800)}\n\n"
-        f"Video context title: {v_title}\n"
-        f"Transcript excerpt for [V1] citations:\n{transcript}\n\n"
-        f"Book/resource excerpts (use only these ids for book citations):\n{chunks_text}\n"
+        f"Video title for transcript: {v_title}\n"
+        f"Transcript excerpt:\n{transcript}\n\n"
+        f"BOOK source definitions (citation ids and labels — use [B#] in the text only):\n{book_refs}\n\n"
+        f"VIDEO segment definitions (citation ids and labels — use [V#] in the text only):\n{video_refs}\n"
     )
 
     try:
@@ -127,22 +151,43 @@ def generate_course_reading(
     title = (data.get("title") or f"{course.title} reading")[:255]
     content_html = (data.get("content_html") or "").strip()
     diagrams = data.get("diagrams") if isinstance(data.get("diagrams"), list) else []
+    diagrams = normalize_diagrams_list(diagrams)
 
-    video_hover = video_transcript_hover_title(v_title)
-    content_html = replace_label_citations_in_html(
-        content_html, chunks, video_hover=video_hover
+    mermaid_warnings = [
+        d["mermaid_warning"]
+        for d in diagrams
+        if isinstance(d, dict) and d.get("mermaid_warning")
+    ]
+    diagrams_for_storage: list = []
+    for d in diagrams:
+        if isinstance(d, dict):
+            e = dict(d)
+            e.pop("mermaid_warning", None)
+            diagrams_for_storage.append(e)
+        else:
+            diagrams_for_storage.append(d)
+
+    citations = build_reading_citations_json(chunks, video_specs)
+    valid_ids = {str(c.get("id", "")).strip() for c in citations if c.get("id")}
+
+    content_html = postprocess_reading_html(
+        content_html,
+        chunks=chunks,
+        video_specs=video_specs,
+        valid_ids=valid_ids,
     )
-    citations = citations_json_from_chunks(chunks, video_title=v_title)
+    content_html = replace_citation_labels_in_html(content_html, chunks, video_specs)
 
     page, _created = CourseReadingPage.objects.get_or_create(course=course)
     page.context = context
     page.title = title
     page.content_html = content_html
     page.citations = citations
-    page.diagrams = diagrams
+    page.diagrams = diagrams_for_storage
     page.editor_json = {
         "summary": data.get("summary") or "",
         "generated": True,
+        "mermaid_warnings": mermaid_warnings,
     }
     page.generated_by_model = model_name
     page.generated_from = {

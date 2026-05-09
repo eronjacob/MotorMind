@@ -34,12 +34,30 @@ class CourseDetailView(LoginRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
+        featured = (
+            self.object.videos.prefetch_related("sections")
+            .order_by("created_at")
+            .first()
+        )
+        featured_sections = []
+        if featured is not None:
+            seen = set()
+            for s in featured.sections.order_by("start_seconds", "order", "pk"):
+                key = (s.title.strip().lower(), int(s.start_seconds), int(s.end_seconds))
+                if key in seen:
+                    continue
+                seen.add(key)
+                featured_sections.append(s)
+        ctx["featured_video"] = featured
+        ctx["featured_video_sections"] = featured_sections
         ctx["course_reading_page"] = None
         ctx["course_reading_html"] = ""
         ctx["course_reading_title"] = ""
         ctx["course_reading_diagrams_json"] = "[]"
         try:
             from study_content.models import CourseReadingPage
+            from study_content.mermaid_sanitize import normalize_diagrams_list
+            from study_content.reading_citations import dedupe_sources_display
             from study_content.utils_html import sanitize_reading_html
 
             page = CourseReadingPage.objects.filter(course=self.object).first()
@@ -47,9 +65,16 @@ class CourseDetailView(LoginRequiredMixin, DetailView):
                 ctx["course_reading_page"] = page
                 ctx["course_reading_html"] = sanitize_reading_html(page.content_html)
                 ctx["course_reading_title"] = page.title or f"{self.object.title} reading"
-                ctx["course_reading_diagrams"] = page.diagrams or []
+                ctx["course_reading_diagrams"] = normalize_diagrams_list(
+                    page.diagrams or []
+                )
+                ctx["course_reading_sources"] = dedupe_sources_display(
+                    page.citations or []
+                )
         except ImportError:
             pass
+        if "course_reading_sources" not in ctx:
+            ctx["course_reading_sources"] = []
         return ctx
 
 

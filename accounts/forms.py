@@ -35,6 +35,7 @@ class TrainingVideoForm(forms.ModelForm):
             "description",
             "youtube_description",
             "transcript",
+            "transcript_paragraph_starts",
             "thumbnail_url",
             "transcript_source",
         )
@@ -45,6 +46,7 @@ class TrainingVideoForm(forms.ModelForm):
             "title": forms.TextInput(attrs={"class": "form-control"}),
             "description": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
             "transcript": forms.Textarea(attrs={"class": "form-control", "rows": 6}),
+            "transcript_paragraph_starts": forms.HiddenInput(),
             "thumbnail_url": forms.HiddenInput(),
             "transcript_source": forms.HiddenInput(),
         }
@@ -52,6 +54,7 @@ class TrainingVideoForm(forms.ModelForm):
             "video_url": "Paste a YouTube URL, then use the buttons below for auto-fill, AI title, or AI description.",
             "youtube_description": "Optional. Used for “AI write description”; oEmbed does not include the full YouTube description yet.",
             "transcript": "Filled from YouTube captions when you use Auto-fill; text is reformatted into readable paragraphs (not AI).",
+            "transcript_paragraph_starts": "Caption-derived start seconds per paragraph (set automatically with Auto-fill).",
         }
 
 
@@ -66,6 +69,7 @@ class TrainingVideoEditForm(forms.ModelForm):
             "description",
             "youtube_description",
             "transcript",
+            "transcript_paragraph_starts",
             "thumbnail_url",
             "transcript_source",
         )
@@ -75,6 +79,7 @@ class TrainingVideoEditForm(forms.ModelForm):
             "title": forms.TextInput(attrs={"class": "form-control"}),
             "description": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
             "transcript": forms.Textarea(attrs={"class": "form-control", "rows": 6}),
+            "transcript_paragraph_starts": forms.HiddenInput(),
             "thumbnail_url": forms.HiddenInput(),
             "transcript_source": forms.HiddenInput(),
         }
@@ -82,6 +87,7 @@ class TrainingVideoEditForm(forms.ModelForm):
             "video_url": "Paste a YouTube URL, then use the buttons below for auto-fill, AI title, or AI description.",
             "youtube_description": "Optional. Used for “AI write description”; oEmbed does not include the full YouTube description yet.",
             "transcript": "Filled from YouTube captions when you use Auto-fill; text is reformatted into readable paragraphs (not AI).",
+            "transcript_paragraph_starts": "Caption-derived start seconds per paragraph (set automatically with Auto-fill).",
         }
 
 

@@ -26,6 +26,16 @@ urlpatterns = [
         manage_views.course_training_video_delete,
         name="course_video_delete",
     ),
+    path(
+        "admin-panel/courses/<int:course_id>/section-suggestions/suggest-draft/",
+        manage_views.video_sections_suggest_draft_api,
+        name="course_sections_suggest_draft",
+    ),
+    path(
+        "admin-panel/courses/<int:course_id>/videos/<int:video_id>/sections/apply/",
+        manage_views.video_sections_apply_api,
+        name="course_video_sections_apply",
+    ),
     path("login/", CarHootLoginView.as_view(), name="login"),
     path("logout/", CarHootLogoutView.as_view(), name="logout"),
     path("dashboard/", DashboardView.as_view(), name="dashboard"),
@@ -64,6 +74,11 @@ urlpatterns = [
         "admin-panel/manage/course/<int:course_pk>/videos/add/",
         manage_views.NestedTrainingVideoCreateView.as_view(),
         name="manage_course_video_add",
+    ),
+    path(
+        "admin-panel/manage/course/<int:course_pk>/videos/sections/suggest-draft/",
+        manage_views.video_sections_suggest_draft_api,
+        name="manage_course_sections_suggest_draft",
     ),
     path(
         "admin-panel/manage/course/<int:course_pk>/sections/add/",

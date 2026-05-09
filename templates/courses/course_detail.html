@@ -1,5 +1,45 @@
 {% extends "base.html" %}
 {% block title %}{{ course.title }} — Car-Hoot{% endblock %}
+{% block extra_head %}
+<style>
+.course-detail-video-row > .col-lg-6 > .card {
+  min-height: 480px;
+}
+.course-video-card .card-body,
+.course-outline-card .card-body {
+  min-height: 0;
+}
+.course-outline-body {
+  overflow-y: auto;
+  max-height: 400px;
+  min-height: 0;
+}
+.course-transcript {
+  white-space: pre-wrap;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+.reading-page-title {
+  font-size: clamp(1.4rem, 2.2vw, 1.9rem);
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--bs-heading-color, inherit);
+}
+#course-reading-body.reading-body h2,
+.reading-body h2 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+#course-reading-body.reading-body h3,
+.reading-body h3 {
+  font-size: 1.02rem;
+  font-weight: 600;
+  margin-top: 1rem;
+}
+</style>
+{% endblock %}
 {% block content %}
 <nav aria-label="breadcrumb">
   <ol class="breadcrumb">
@@ -11,81 +51,96 @@
 <h1 class="mb-2">{{ course.title }}</h1>
 <p class="text-muted">{{ course.description }}</p>
 
-<div class="row g-4 mt-2">
-  <div class="col-lg-6">
-    <div class="card shadow-sm">
-      <div class="card-header fw-semibold">Training videos</div>
-      <ul class="list-group list-group-flush">
-        {% for v in course.videos.all %}
-          <li class="list-group-item">
-            <div class="d-flex gap-3 align-items-center">
-              {% if v.youtube_thumbnail_url %}
-                <img src="{{ v.youtube_thumbnail_url }}" alt="" class="img-thumbnail flex-shrink-0" style="width: 120px; max-width: 120px;">
-              {% else %}
-                <div class="flex-shrink-0 border rounded bg-light text-muted small d-flex align-items-center justify-content-center px-2 text-center" style="width: 120px; min-height: 68px;">No thumbnail</div>
-              {% endif %}
-              <div class="flex-grow-1 min-w-0">
-                <strong>{{ v.title }}</strong>
-                <div class="small text-muted">{{ v.description|truncatewords:12 }}</div>
-              </div>
-              <a class="btn btn-sm btn-outline-primary flex-shrink-0"
-                 href="{% url 'courses:video_detail' course.pk v.pk %}">Watch</a>
-            </div>
-          </li>
-        {% empty %}
-          <li class="list-group-item text-muted">No videos yet.</li>
-        {% endfor %}
-      </ul>
+{% if featured_video %}
+<div class="row g-4 mt-2 align-items-stretch course-detail-video-row">
+  <div class="col-lg-6 d-flex">
+    <div class="card shadow-sm course-video-card flex-fill d-flex flex-column w-100">
+      <div class="card-header fw-semibold">Training video</div>
+      <div class="card-body d-flex flex-column flex-grow-1">
+        {% if featured_video.youtube_embed_url %}
+        <div
+          class="ratio ratio-16x9 flex-shrink-0"
+          id="course-video-embed-wrap"
+          data-embed-base="{{ featured_video.youtube_embed_url }}"
+        >
+          <iframe
+            id="course-video-iframe"
+            src="{{ featured_video.youtube_embed_url }}?rel=0"
+            title="{{ featured_video.title }}"
+            allowfullscreen
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            referrerpolicy="strict-origin-when-cross-origin"></iframe>
+        </div>
+        {% else %}
+        <div class="ratio ratio-16x9 flex-shrink-0 bg-secondary bg-opacity-10 border rounded d-flex align-items-center justify-content-center">
+          <div class="text-center p-3 small">
+            <p class="mb-2">This training link is not a YouTube video, so it cannot be embedded here.</p>
+            <a class="btn btn-primary btn-sm" href="{{ featured_video.video_url }}" target="_blank" rel="noopener">Open video</a>
+          </div>
+        </div>
+        {% endif %}
+        <h2 class="h6 mt-3 mb-1">{{ featured_video.title }}</h2>
+        {% if featured_video.description %}
+        <p class="small text-muted mb-0">{{ featured_video.description }}</p>
+        {% endif %}
+      </div>
     </div>
   </div>
-
-  <div class="col-lg-6">
-    <div class="card shadow-sm mb-3">
-      <div class="card-header fw-semibold">Video sections (outline)</div>
-      <div class="card-body small">
-        {% for v in course.videos.all %}
-          <p class="fw-semibold mb-1">{{ v.title }}</p>
-          <ul>
-            {% for s in v.sections.all %}
-              <li>
-                {{ s.title }}
-                ({{ s.start_seconds }}s–{{ s.end_seconds }}s)
-                <a href="{% url 'courses:video_detail' course.pk v.pk %}?t={{ s.start_seconds }}">Jump</a>
-              </li>
+  <div class="col-lg-6 d-flex">
+    <div class="card shadow-sm course-outline-card flex-fill d-flex flex-column w-100">
+      <div class="card-header fw-semibold d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <span>Outline</span>
+        <div class="btn-group" role="group" aria-label="Outline view">
+          <button type="button" class="btn btn-sm btn-primary" id="course-outline-tab-sections">Video sections</button>
+          <button type="button" class="btn btn-sm btn-outline-primary" id="course-outline-tab-transcript">Transcript</button>
+        </div>
+      </div>
+      <div class="card-body d-flex flex-column flex-grow-1 pt-3">
+        <div id="course-outline-panel-sections" class="course-outline-body">
+          <ul class="list-unstyled mb-0 small">
+            {% for s in featured_video_sections %}
+            <li class="mb-2 pb-2{% if not forloop.last %} border-bottom{% endif %}">
+              <div class="fw-medium">{{ s.title }}</div>
+              <div class="text-muted">
+                {% if featured_video.youtube_embed_url %}
+                <button type="button" class="btn btn-link btn-sm p-0 align-baseline course-video-jump" data-start="{{ s.start_seconds }}">{{ s.start_seconds }}s–{{ s.end_seconds }}s</button>
+                {% else %}
+                <a href="{% url 'courses:video_detail' course.pk featured_video.pk %}?t={{ s.start_seconds }}" class="text-reset text-decoration-none">{{ s.start_seconds }}s–{{ s.end_seconds }}s</a>
+                {% endif %}
+              </div>
+            </li>
             {% empty %}
-              <li class="text-muted">No sections for this video.</li>
+            <li class="text-muted">No sections for this video.</li>
             {% endfor %}
           </ul>
-        {% empty %}
-          <p class="text-muted mb-0">No outline yet.</p>
-        {% endfor %}
+        </div>
+        <div id="course-outline-panel-transcript" class="course-outline-body d-none">
+          {% if featured_video.transcript %}
+          <div class="course-transcript">{{ featured_video.transcript }}</div>
+          {% else %}
+          <p class="text-muted mb-0">No transcript available.</p>
+          {% endif %}
+        </div>
       </div>
     </div>
   </div>
 </div>
+{% else %}
+<p class="text-muted mt-3 mb-0">No training video published for this course yet.</p>
+{% endif %}
 
 {% if course_reading_page %}
 <div class="card shadow-sm mt-4" id="course-reading-section">
   <div class="card-header fw-semibold">Reading</div>
   <div class="card-body">
-    <h2 class="h5">{{ course_reading_title }}</h2>
+    <h2 class="reading-page-title">{{ course_reading_title }}</h2>
     <div id="course-reading-body" class="reading-body">{{ course_reading_html|safe }}</div>
-    {% if course_reading_page.citations %}
+    {% if course_reading_sources %}
       <hr>
       <h3 class="h6">Sources</h3>
       <ul class="small mb-0">
-        {% for c in course_reading_page.citations %}
-          <li>
-            {% if c.surname %}
-              <abbr class="reading-cite{% if c.type == 'video' %} reading-cite--video{% endif %}" title="{{ c.hover_title|default:''|escape }}">{{ c.surname }}</abbr>
-              {% if c.source_title %}<span class="text-muted"> — {{ c.source_title }}</span>{% endif %}
-            {% elif c.type == "book" %}
-              <strong>{{ c.id|default:"—" }}</strong>
-              — {{ c.source_title|default:"" }}{% if c.author %} ({{ c.author }}){% endif %}{% if c.page_number %}, p. {{ c.page_number }}{% endif %}
-            {% elif c.type == "video" %}
-              — Video: {{ c.video_title|default:"Course videos" }}
-            {% endif %}
-          </li>
+        {% for c in course_reading_sources %}
+          <li>[{{ c.id|default:"—" }}] {{ c.label|default:"" }}.</li>
         {% endfor %}
       </ul>
     {% endif %}
@@ -134,6 +189,52 @@
 {% endblock %}
 
 {% block extra_js %}
+{% if featured_video %}
+<script>
+(function () {
+  var tabSec = document.getElementById('course-outline-tab-sections');
+  var tabTr = document.getElementById('course-outline-tab-transcript');
+  var panSec = document.getElementById('course-outline-panel-sections');
+  var panTr = document.getElementById('course-outline-panel-transcript');
+  if (!tabSec || !tabTr || !panSec || !panTr) return;
+
+  function showSections() {
+    panSec.classList.remove('d-none');
+    panTr.classList.add('d-none');
+    tabSec.classList.remove('btn-outline-primary');
+    tabSec.classList.add('btn-primary');
+    tabTr.classList.remove('btn-primary');
+    tabTr.classList.add('btn-outline-primary');
+  }
+
+  function showTranscript() {
+    panTr.classList.remove('d-none');
+    panSec.classList.add('d-none');
+    tabTr.classList.remove('btn-outline-primary');
+    tabTr.classList.add('btn-primary');
+    tabSec.classList.remove('btn-primary');
+    tabSec.classList.add('btn-outline-primary');
+  }
+
+  tabSec.addEventListener('click', showSections);
+  tabTr.addEventListener('click', showTranscript);
+
+  var wrap = document.getElementById('course-video-embed-wrap');
+  var iframe = document.getElementById('course-video-iframe');
+  var base = wrap && wrap.getAttribute('data-embed-base');
+  if (iframe && base) {
+    document.querySelectorAll('.course-video-jump').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var t = parseInt(btn.getAttribute('data-start'), 10);
+        if (isNaN(t) || t < 0) t = 0;
+        var sep = base.indexOf('?') >= 0 ? '&' : '?';
+        iframe.src = base + sep + 'start=' + t + '&rel=0';
+      });
+    });
+  }
+})();
+</script>
+{% endif %}
 {% if course_reading_page %}
 <style>
 .reading-cite { cursor: help; text-decoration: underline dotted; text-underline-offset: 3px; text-decoration-thickness: 1px; }
@@ -157,13 +258,24 @@
     var id = slot.getAttribute('data-diagram-id');
     var d = diagrams.find(function (x) { return x && x.id === id; });
     if (!d || !d.code) return;
-    var pre = document.createElement('pre');
-    pre.className = 'mermaid';
-    pre.textContent = d.code;
+    var box = document.createElement('div');
+    box.className = 'mermaid';
+    box.textContent = d.code;
     slot.innerHTML = '';
-    slot.appendChild(pre);
+    slot.appendChild(box);
   });
-  try { mermaid.run({ querySelector: '#course-reading-body .mermaid' }); } catch (e) {}
+  try {
+    var run = mermaid.run({ querySelector: '#course-reading-body .mermaid' });
+    if (run && typeof run.then === 'function') {
+      run.catch(function () {
+        host.querySelectorAll('[data-diagram-id] .mermaid').forEach(function (el) {
+          if (!el.querySelector('svg')) {
+            el.innerHTML = '<p class="small text-muted mb-0">Diagram could not be rendered.</p>';
+          }
+        });
+      });
+    }
+  } catch (e) {}
 })();
 </script>
 {% endif %}

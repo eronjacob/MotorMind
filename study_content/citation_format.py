@@ -35,6 +35,8 @@ def chunk_hover_title(chunk: CourseReadingSourceChunk) -> str:
         bits.append(f"Section: {section}")
     if chunk.page_number is not None:
         bits.append(f"Page {chunk.page_number}")
+    elif chunk.chunk_index is not None:
+        bits.append(f"Chunk index {chunk.chunk_index}")
     return " · ".join(bits) if bits else "Book excerpt"
 
 
@@ -42,11 +44,22 @@ def video_transcript_hover_title(video_title: str) -> str:
     return f"Transcript: {video_title or 'Course videos'}"
 
 
-def abbr_citation_html(surname: str, hover_title: str, *, video: bool = False) -> str:
+def abbr_citation_html(
+    cite_key: str,
+    hover_title: str,
+    *,
+    video: bool = False,
+    visible_brackets: bool = False,
+) -> str:
+    """cite_key is e.g. surname 'Denton' or label 'B1' / 'V2'. When visible_brackets, show [B1] in the page."""
     cls = "reading-cite reading-cite--video" if video else "reading-cite"
+    if visible_brackets:
+        display = f"[{cite_key}]"
+    else:
+        display = html.escape(cite_key)
     return (
         f'<abbr class="{cls}" title="{html.escape(hover_title, quote=True)}">'
-        f"{html.escape(surname)}</abbr>"
+        f"{display}</abbr>"
     )
 
 

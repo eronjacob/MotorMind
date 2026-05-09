@@ -29,6 +29,14 @@ class TrainingVideo(models.Model):
     description = models.TextField(blank=True)
     video_url = models.URLField(max_length=500)
     transcript = models.TextField(blank=True)
+    transcript_paragraph_starts = models.JSONField(
+        default=list,
+        blank=True,
+        help_text=(
+            "Integer start seconds per transcript paragraph (split by blank lines), "
+            "from YouTube caption timing — not embedded in transcript text."
+        ),
+    )
     # Optional cache from teacher "Auto-fill" / oEmbed (YouTube still works if blank)
     thumbnail_url = models.URLField(max_length=500, blank=True, default="")
     transcript_source = models.CharField(
@@ -57,12 +65,41 @@ class TrainingVideo(models.Model):
         return extract_youtube_video_id(self.video_url or "")
 
     @property
+    def youtube_embed_url(self) -> str:
+        """Base YouTube iframe embed URL, or empty string if not a YouTube link."""
+        vid = self.youtube_video_id
+        if not vid:
+            return ""
+        return f"https://www.youtube.com/embed/{vid}"
+
+    @property
     def youtube_thumbnail_url(self):
         if self.thumbnail_url:
             return self.thumbnail_url
         from .utils import get_youtube_thumbnail_url
 
         return get_youtube_thumbnail_url(self.video_url or "")
+
+    def reconcile_transcript_paragraph_starts(self) -> None:
+        """Clear or clamp stored times when paragraph count does not match transcript."""
+        from courses.services.transcript_formatting import split_transcript_paragraphs
+
+        paras = split_transcript_paragraphs(self.transcript or "")
+        starts = self.transcript_paragraph_starts
+        if not isinstance(starts, list) or len(starts) != len(paras):
+            self.transcript_paragraph_starts = []
+            return
+        clean: list[int] = []
+        for x in starts:
+            try:
+                clean.append(int(max(0, min(86400, float(x)))))
+            except (TypeError, ValueError):
+                clean.append(0)
+        self.transcript_paragraph_starts = clean
+
+    def save(self, *args, **kwargs):
+        self.reconcile_transcript_paragraph_starts()
+        super().save(*args, **kwargs)
 
 
 class VideoSection(models.Model):

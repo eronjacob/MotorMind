@@ -9,7 +9,7 @@ import logging
 import os
 from typing import Any
 
-from courses.models import Course, TrainingVideo
+from courses.models import Course, TrainingVideo, VideoSection
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +48,50 @@ def get_quiz_ai_gate(course: Course) -> dict[str, Any]:
         "chunk_count": chunk_count,
         "message": message,
     }
+
+
+def _video_transcript_paragraph_meta(video: TrainingVideo | None) -> str:
+    """Prompt block: paragraph index → approximate jump time from caption alignment."""
+    if not video:
+        return ""
+    from courses.services.transcript_formatting import split_transcript_paragraphs
+
+    paras = split_transcript_paragraphs(video.transcript or "")
+    starts = video.transcript_paragraph_starts or []
+    if not paras or not isinstance(starts, list) or len(starts) != len(paras):
+        return ""
+    lines: list[str] = []
+    for i, (p, st) in enumerate(zip(paras, starts)):
+        snip = p.replace("\n", " ")[:160]
+        try:
+            sec = int(max(0, float(st)))
+        except (TypeError, ValueError):
+            sec = 0
+        lines.append(f"- Paragraph {i + 1} starts at ~{sec}s in this video: {snip}")
+    return "Transcript paragraph timing (seconds in this video; use for timestamp_seconds when relevant):\n" + "\n".join(
+        lines
+    )
+
+
+def _sections_catalog_for_prompt(course: Course, video_id: int | None) -> tuple[str, set[int]]:
+    qs = VideoSection.objects.filter(video__course_id=course.pk).select_related("video")
+    if video_id:
+        qs = qs.filter(video_id=video_id)
+    ids: set[int] = set()
+    lines: list[str] = []
+    for s in qs.order_by("video_id", "order", "pk"):
+        ids.add(s.pk)
+        lines.append(
+            f"- section_id={s.pk}: {s.title!r} on video {s.video.title!r} "
+            f"({s.start_seconds}s–{s.end_seconds}s)"
+        )
+    if not lines:
+        return "", ids
+    return (
+        "Video sections (set section_id to one of these integers when a question clearly belongs "
+        "in that span; otherwise null):\n" + "\n".join(lines),
+        ids,
+    )
 
 
 def _transcript_for_quiz(course: Course, video_id: int | None) -> str:
@@ -148,6 +192,20 @@ def generate_quiz_question_suggestions(
     model_name = (os.environ.get("GOOGLE_MODEL_NAME") or "gemma-3-27b-it").strip()
     tr_snip = transcript[:14000]
 
+    focus_video: TrainingVideo | None = None
+    if video_id:
+        focus_video = TrainingVideo.objects.filter(pk=video_id, course_id=course.pk).first()
+    para_meta = _video_transcript_paragraph_meta(focus_video)
+    sec_block, valid_section_ids = _sections_catalog_for_prompt(course, video_id)
+
+    json_shape = (
+        "Return STRICT JSON: {\"questions\":[{\"question_text\":...,\"explanation\":...,"
+        "\"timestamp_seconds\":<non-negative integer seconds in the training video or null>,"
+        "\"section_id\":<integer from the section catalog below or null>,"
+        "\"answers\":[{\"answer_text\":...,\"is_correct\":true/false},...],"
+        "\"source_refs\":[\"V1\",\"B2\"]}]}\n\n"
+    )
+
     prompt = (
         "You write assessment items for an automotive electronics / diagnostics course. "
         f"Generate exactly {n_q} multiple-choice questions. "
@@ -156,10 +214,16 @@ def generate_quiz_question_suggestions(
         "Prefer 4 answer options per question with exactly one correct answer. "
         "Include a concise explanation per question. "
         "Add source_refs as a list of citation ids like [\"V1\",\"B2\"] referencing transcript [V1] or book chunk labels [B1]..[B5]. "
-        "Return STRICT JSON: {\"questions\":[{\"question_text\":...,\"explanation\":...,\"timestamp_seconds\":null,"
-        "\"answers\":[{\"answer_text\":...,\"is_correct\":true/false},...],\"source_refs\":[\"V1\",\"B2\"]}]}\n\n"
-        f"Transcript excerpt (cite as [V1]):\n{tr_snip}\n\nReading excerpts:\n{chunks_text}\n"
+        "When paragraph timing is provided, set timestamp_seconds to the best matching jump time. "
+        "When sections are listed, set section_id only if the question clearly fits that span. "
+        + json_shape
+        + f"Transcript excerpt (cite as [V1]):\n{tr_snip}\n\n"
     )
+    if para_meta:
+        prompt += para_meta + "\n\n"
+    if sec_block:
+        prompt += sec_block + "\n\n"
+    prompt += f"Reading excerpts:\n{chunks_text}\n"
 
     try:
         import google.generativeai as genai
@@ -219,11 +283,33 @@ def generate_quiz_question_suggestions(
         if not isinstance(refs, list):
             refs = []
         refs = [str(x).strip() for x in refs if str(x).strip()][:8]
+
+        ts_val = None
+        ts_raw = q.get("timestamp_seconds")
+        if ts_raw is not None and str(ts_raw).strip() not in ("", "null", "None"):
+            try:
+                ts_val = int(float(ts_raw))
+            except (TypeError, ValueError):
+                ts_val = None
+            if ts_val is not None:
+                ts_val = max(0, min(ts_val, 86400 * 2))
+
+        sec_id = None
+        sec_raw = q.get("section_id")
+        if sec_raw is not None and str(sec_raw).strip() not in ("", "null", "None"):
+            try:
+                cand = int(sec_raw)
+            except (TypeError, ValueError):
+                cand = None
+            if cand is not None and cand in valid_section_ids:
+                sec_id = cand
+
         cleaned.append(
             {
                 "question_text": qtext,
                 "explanation": (q.get("explanation") or "").strip(),
-                "timestamp_seconds": q.get("timestamp_seconds"),
+                "timestamp_seconds": ts_val,
+                "section_id": sec_id,
                 "answers": answers_out,
                 "source_refs": refs,
             }

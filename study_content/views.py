@@ -20,6 +20,8 @@ from courses.models import Course, TrainingVideo
 from study_content.models import CourseReadingContext, CourseReadingPage
 from study_content.services.generation import generate_course_reading
 from study_content.services.retrieval import RetrievalError, select_top_chunks_for_course_reading
+from study_content.mermaid_sanitize import normalize_diagrams_list
+from study_content.reading_citations import dedupe_sources_display
 from study_content.utils_html import sanitize_reading_html
 
 logger = logging.getLogger(__name__)
@@ -95,6 +97,55 @@ def reading_generate(request, course_id):
 
 
 @login_required
+@require_POST
+def reading_regenerate(request, course_id):
+    """Re-run reading generation with current chunks (same as Generate, different message)."""
+    course = get_object_or_404(_teacher_course_queryset(request.user), pk=course_id)
+    if not user_can_manage_course(request.user, course):
+        return HttpResponseForbidden()
+    ctx = CourseReadingContext.objects.filter(course=course).order_by("-pk").first()
+    if ctx is None or not ctx.source_chunks.exists():
+        try:
+            ctx = select_top_chunks_for_course_reading(
+                course, video=None, top_k=5, user=request.user
+            )
+        except RetrievalError as exc:
+            messages.error(request, exc.message)
+            return redirect("accounts:manage_course", pk=course.pk)
+        except Exception as exc:
+            logger.exception("reading_regenerate auto-retrieve failed")
+            messages.error(request, str(exc))
+            return redirect("accounts:manage_course", pk=course.pk)
+    try:
+        generate_course_reading(course, ctx, user=request.user)
+        messages.success(
+            request,
+            "Reading regenerated with updated citations, diagrams, and source lines.",
+        )
+    except ValueError as exc:
+        messages.error(request, str(exc))
+    except Exception as exc:
+        logger.exception("reading_regenerate failed")
+        messages.error(request, f"Regeneration failed: {exc}")
+    return redirect("accounts:manage_course", pk=course.pk)
+
+
+@login_required
+@require_POST
+def reading_delete(request, course_id):
+    """Delete the course reading page so it no longer appears on the public course."""
+    course = get_object_or_404(_teacher_course_queryset(request.user), pk=course_id)
+    if not user_can_manage_course(request.user, course):
+        return HttpResponseForbidden()
+    n, _ = CourseReadingPage.objects.filter(course=course).delete()
+    if n:
+        messages.success(request, "Reading removed from this course.")
+    else:
+        messages.info(request, "There was no saved reading to remove.")
+    return redirect("accounts:manage_course", pk=course.pk)
+
+
+@login_required
 @require_http_methods(["GET", "POST"])
 def reading_edit(request, course_id):
     course = get_object_or_404(_teacher_course_queryset(request.user), pk=course_id)
@@ -115,9 +166,16 @@ def reading_edit(request, course_id):
         except json.JSONDecodeError:
             page.citations = []
         try:
-            page.diagrams = json.loads(request.POST.get("diagrams_json") or "[]")
+            diagrams = json.loads(request.POST.get("diagrams_json") or "[]")
         except json.JSONDecodeError:
-            page.diagrams = []
+            diagrams = []
+        cleaned_diagrams = (
+            normalize_diagrams_list(diagrams) if isinstance(diagrams, list) else []
+        )
+        for d in cleaned_diagrams:
+            if isinstance(d, dict):
+                d.pop("mermaid_warning", None)
+        page.diagrams = cleaned_diagrams
         page.is_teacher_edited = True
         page.save()
         messages.success(request, "Reading saved.")
@@ -132,11 +190,22 @@ def reading_edit(request, course_id):
             "latest_context": latest_ctx,
             "source_chunks": source_chunks,
             "citations_json": json.dumps(page.citations or [], indent=2),
-            "diagrams_json": json.dumps(page.diagrams or [], indent=2),
+            "diagrams_json": json.dumps(
+                _diagrams_json_for_editor(page.diagrams or []), indent=2
+            ),
             "preview_html": sanitize_reading_html(page.content_html or ""),
             "back_url": reverse("accounts:manage_course", kwargs={"pk": course.pk}),
+            "mermaid_warnings": (page.editor_json or {}).get("mermaid_warnings") or [],
         },
     )
+
+
+def _diagrams_json_for_editor(diagrams: list) -> list:
+    out = normalize_diagrams_list(diagrams)
+    for d in out:
+        if isinstance(d, dict):
+            d.pop("mermaid_warning", None)
+    return out
 
 
 @login_required
@@ -148,6 +217,7 @@ def reading_preview(request, course_id):
     if not page or not (page.content_html or "").strip():
         messages.info(request, "No reading content to preview yet.")
         return redirect("accounts:manage_course", pk=course.pk)
+    diagrams_display = normalize_diagrams_list(page.diagrams or [])
     return render(
         request,
         "study_content/reading_preview.html",
@@ -155,6 +225,8 @@ def reading_preview(request, course_id):
             "course": course,
             "page": page,
             "reading_html_safe": sanitize_reading_html(page.content_html or ""),
+            "reading_diagrams_display": diagrams_display,
+            "reading_sources_display": dedupe_sources_display(page.citations or []),
             "back_url": reverse("accounts:manage_course", kwargs={"pk": course.pk}),
         },
     )

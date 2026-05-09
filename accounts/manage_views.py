@@ -1,5 +1,6 @@
 import json
 import logging
+from typing import Any
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -235,6 +236,7 @@ class CourseHubView(TeacherRequiredMixin, UpdateView):
             else:
                 ctx["reading_status"] = "Not generated"
             ctx["reading_updated"] = getattr(page, "updated_at", None) if page else None
+            ctx["reading_can_remove"] = page is not None
         except ImportError:
             ctx["study_content_enabled"] = False
             ctx["course_reading_page"] = None
@@ -243,6 +245,7 @@ class CourseHubView(TeacherRequiredMixin, UpdateView):
             ctx["reading_updated"] = None
             ctx["reading_latest_chunks"] = []
             ctx["reading_chunks_preview"] = []
+            ctx["reading_can_remove"] = False
         return ctx
 
     def form_valid(self, form):
@@ -272,6 +275,10 @@ class TrainingVideoCreateView(BaseManageCreateView):
         ctx = super().get_context_data(**kwargs)
         ctx["form_title"] = "Add training video"
         ctx["show_course_field"] = True
+        ctx["video_sections"] = []
+        ctx["sections_suggest_url"] = ""
+        ctx["sections_apply_url"] = ""
+        ctx["paragraph_timing_preview"] = []
         return ctx
 
     def get_success_url(self):
@@ -287,6 +294,13 @@ class NestedTrainingVideoCreateView(NestedCourseManageMixin, BaseManageCreateVie
         ctx = super().get_context_data(**kwargs)
         ctx["form_title"] = "Add training video"
         ctx["show_course_field"] = True
+        ctx["video_sections"] = []
+        ctx["sections_suggest_url"] = reverse(
+            "accounts:manage_course_sections_suggest_draft",
+            kwargs={"course_pk": self.nested_course_id},
+        )
+        ctx["sections_apply_url"] = ""
+        ctx["paragraph_timing_preview"] = []
         return ctx
 
     def get_initial(self):
@@ -320,6 +334,43 @@ class NestedTrainingVideoUpdateView(NestedCourseByIdMixin, TeacherRequiredMixin,
         ctx = super().get_context_data(**kwargs)
         ctx["form_title"] = "Edit training video"
         ctx["show_course_field"] = False
+        if getattr(self.object, "pk", None):
+            ctx["video_sections"] = list(self.object.sections.order_by("order", "pk"))
+            ctx["sections_suggest_url"] = reverse(
+                "accounts:course_sections_suggest_draft",
+                kwargs={"course_id": self.nested_course_id},
+            )
+            ctx["sections_apply_url"] = reverse(
+                "accounts:course_video_sections_apply",
+                kwargs={"course_id": self.nested_course_id, "video_id": self.object.pk},
+            )
+            from courses.services.transcript_formatting import split_transcript_paragraphs
+
+            paras = split_transcript_paragraphs(self.object.transcript or "")
+            starts = self.object.transcript_paragraph_starts or []
+            if isinstance(starts, list) and len(starts) == len(paras) and paras:
+                preview_rows = []
+                for i, (p, s) in enumerate(zip(paras, starts)):
+                    try:
+                        sec = int(max(0, min(86400, float(s))))
+                    except (TypeError, ValueError):
+                        sec = 0
+                    flat = p.replace("\n", " ").strip()
+                    preview_rows.append(
+                        {
+                            "index": i + 1,
+                            "start_seconds": sec,
+                            "label": (flat[:80] + ("…" if len(flat) > 80 else "")),
+                        }
+                    )
+                ctx["paragraph_timing_preview"] = preview_rows
+            else:
+                ctx["paragraph_timing_preview"] = []
+        else:
+            ctx["video_sections"] = []
+            ctx["sections_suggest_url"] = ""
+            ctx["sections_apply_url"] = ""
+            ctx["paragraph_timing_preview"] = []
         return ctx
 
     def get_queryset(self):
@@ -520,11 +571,105 @@ def video_youtube_autofill_api(request):
             "youtube_description": payload.get("youtube_description") or "",
             "thumbnail_url": payload.get("thumbnail_url") or "",
             "transcript": payload.get("transcript") or "",
+            "transcript_paragraph_starts": payload.get("transcript_paragraph_starts") or [],
             "transcript_source": payload.get("transcript_source") or "",
             "transcript_source_code": payload.get("transcript_source_code") or "",
             "warnings": payload.get("warnings") or [],
         }
     )
+
+
+@login_required
+@require_POST
+def video_sections_suggest_draft_api(request, course_id=None, course_pk=None):
+    """Return AI or fallback learning-section suggestions from the POST body (does not save)."""
+    cid = course_id if course_id is not None else course_pk
+    if cid is None:
+        return JsonResponse({"success": False, "error": "Missing course."}, status=400)
+    course = get_object_or_404(_teacher_course_queryset(request.user), pk=cid)
+    if not user_can_manage_course(request.user, course):
+        return JsonResponse({"success": False, "error": "Forbidden"}, status=403)
+    try:
+        body = json.loads(request.body.decode("utf-8") or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"success": False, "error": "Invalid JSON"}, status=400)
+
+    title = body.get("title") if isinstance(body.get("title"), str) else ""
+    video_url = body.get("video_url") if isinstance(body.get("video_url"), str) else ""
+    transcript = body.get("transcript") if isinstance(body.get("transcript"), str) else ""
+
+    starts: list[Any] = []
+    starts_raw = body.get("transcript_paragraph_starts")
+    if isinstance(starts_raw, list):
+        starts = starts_raw
+    elif isinstance(starts_raw, str) and starts_raw.strip():
+        try:
+            starts = json.loads(starts_raw)
+        except json.JSONDecodeError:
+            starts = []
+    if not isinstance(starts, list):
+        starts = []
+
+    from courses.services.section_suggestions import build_section_suggestions
+
+    out = build_section_suggestions(
+        title=str(title or ""),
+        video_url=str(video_url or ""),
+        transcript=transcript,
+        paragraph_starts=starts,
+    )
+    status = 200 if out.get("success") else 400
+    return JsonResponse(out, status=status)
+
+
+@login_required
+@require_POST
+def video_sections_apply_api(request, course_id, video_id):
+    """Create VideoSection rows from client-edited suggestion list."""
+    course = get_object_or_404(_teacher_course_queryset(request.user), pk=course_id)
+    if not user_can_manage_course(request.user, course):
+        return JsonResponse({"success": False, "error": "Forbidden"}, status=403)
+    video = get_object_or_404(TrainingVideo, pk=video_id, course_id=course_id)
+    try:
+        body = json.loads(request.body.decode("utf-8") or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"success": False, "error": "Invalid JSON"}, status=400)
+
+    mode = (body.get("mode") or "").strip().lower()
+    if mode not in ("replace", "append"):
+        return JsonResponse(
+            {"success": False, "error": 'mode must be "replace" or "append".'},
+            status=400,
+        )
+    if mode == "replace" and not body.get("confirm"):
+        return JsonResponse(
+            {
+                "success": False,
+                "error": "Send confirm: true in the JSON body to delete existing sections and replace them.",
+            },
+            status=400,
+        )
+
+    sections = body.get("sections")
+    if not isinstance(sections, list) or not sections:
+        return JsonResponse({"success": False, "error": "sections must be a non-empty array."}, status=400)
+
+    from courses.services.section_suggestions import apply_suggested_sections
+
+    n, err = apply_suggested_sections(video, sections, replace=(mode == "replace"))
+    if err:
+        return JsonResponse({"success": False, "error": err}, status=400)
+    video.refresh_from_db()
+    sections_out = [
+        {
+            "title": s.title,
+            "start_seconds": s.start_seconds,
+            "end_seconds": s.end_seconds,
+            "summary": s.summary or "",
+        }
+        for s in video.sections.order_by("order", "pk")
+    ]
+    return JsonResponse({"success": True, "created": n, "sections": sections_out})
 
 
 @login_required
@@ -626,7 +771,7 @@ def course_quiz_create(request, course_id):
         return HttpResponseForbidden()
 
     section_options = [
-        {"id": s.pk, "label": f"{s.video.title}: {s.title}"}
+        {"id": s.pk, "label": f"{s.video.title}: {s.title}", "video_id": s.video_id}
         for s in VideoSection.objects.filter(video__course_id=course.pk)
         .select_related("video")
         .order_by("video_id", "order", "pk")
@@ -738,7 +883,7 @@ def course_quiz_edit(request, course_id, quiz_id):
     )
 
     section_options = [
-        {"id": s.pk, "label": f"{s.video.title}: {s.title}"}
+        {"id": s.pk, "label": f"{s.video.title}: {s.title}", "video_id": s.video_id}
         for s in VideoSection.objects.filter(video__course_id=course.pk)
         .select_related("video")
         .order_by("video_id", "order", "pk")

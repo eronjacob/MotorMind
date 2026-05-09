@@ -92,6 +92,10 @@ def select_top_chunks_for_course_reading(
         except (TypeError, ValueError):
             chunk_index = None
         pn = meta.get("page_number")
+        if pn in (None, ""):
+            pn = meta.get("page")
+        if pn in (None, ""):
+            pn = meta.get("pdf_page")
         try:
             page_number = int(pn) if pn not in (None, "") else None
         except (TypeError, ValueError):

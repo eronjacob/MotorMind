@@ -58,17 +58,14 @@
                   <div class="flex-grow-1 min-w-0">
                     <div class="fw-semibold">{{ v.title }}</div>
                     <div class="text-muted text-break small">{{ v.video_url }}</div>
-                    {% if v.sections.all %}
-                      <ul class="mb-0 mt-1">
-                        {% for s in v.sections.all %}
-                          <li>{{ s.title }} ({{ s.start_seconds }}s–{{ s.end_seconds }}s)</li>
-                        {% endfor %}
-                      </ul>
+                    {% with n=v.sections.count %}
+                    {% if n %}
+                      <p class="text-muted mb-0 mt-1 small">{{ n }} learning section{{ n|pluralize }} — open Edit video to review or change them.</p>
                     {% else %}
-                      <p class="text-muted mb-0 mt-1">No sections yet.</p>
+                      <p class="text-muted mb-0 mt-1 small">No sections yet — use Edit video to suggest learning sections from the transcript.</p>
                     {% endif %}
+                    {% endwith %}
                     <div class="d-flex flex-wrap gap-1 mt-2">
-                      <a class="btn btn-sm btn-outline-primary" href="{% url 'accounts:manage_course_section_add' course.pk %}?video={{ v.pk }}">Add section</a>
                       <a class="btn btn-sm btn-outline-secondary" href="{% url 'accounts:course_video_edit' course.pk v.pk %}">Edit video</a>
                       <form method="post" action="{% url 'accounts:course_video_delete' course.pk v.pk %}" class="d-inline" onsubmit="return confirm('Delete this video and all its sections?');">
                         {% csrf_token %}
@@ -81,7 +78,7 @@
             {% endfor %}
           </ul>
         {% else %}
-          <p class="text-muted small mb-0">No videos yet. Add a video, then add timestamped sections.</p>
+          <p class="text-muted small mb-0">No videos yet. Add a video, then use Edit video to suggest learning sections from captions.</p>
         {% endif %}
       </div>
     </div>
@@ -338,8 +335,20 @@
       {% csrf_token %}
       <button type="submit" class="btn btn-sm btn-primary">Generate reading</button>
     </form>
+    {% if reading_can_remove %}
+    <form method="post" action="{% url 'study_content:reading_regenerate' course.pk %}" class="d-inline ms-1" onsubmit="return confirm('Regenerate the reading from the latest chunks? Current HTML will be replaced.');">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-sm btn-outline-primary">Regenerate reading</button>
+    </form>
+    {% endif %}
     <a class="btn btn-sm btn-outline-secondary ms-1" href="{% url 'study_content:reading_edit' course.pk %}">Edit reading</a>
     <a class="btn btn-sm btn-outline-info ms-1" href="{% url 'study_content:reading_preview' course.pk %}" target="_blank" rel="noopener">Preview reading</a>
+    {% if reading_can_remove %}
+    <form method="post" action="{% url 'study_content:reading_delete' course.pk %}" class="d-inline ms-1" onsubmit="return confirm('Remove the reading from this course? Students will no longer see it on the course page. This cannot be undone.');">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-sm btn-outline-danger">Remove reading</button>
+    </form>
+    {% endif %}
   </div>
 </div>
 {% endif %}
