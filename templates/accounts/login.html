@@ -1,29 +1,118 @@
 {% extends "base.html" %}
 {% block title %}Log in — Car-Hoot{% endblock %}
 {% block content %}
-<div class="row justify-content-center">
-  <div class="col-md-5">
-    <div class="card shadow-sm">
-      <div class="card-body">
-        <h1 class="h4 mb-3">Log in</h1>
-        <form method="post" novalidate>
-          {% csrf_token %}
-          {% if form.non_field_errors %}
-            <div class="alert alert-danger">{{ form.non_field_errors }}</div>
-          {% endif %}
-          {% for field in form %}
-            <div class="mb-3">
-              <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-              {{ field.errors }}
-              {{ field }}
-            </div>
-          {% endfor %}
-          <button type="submit" class="btn btn-primary w-100">Sign in</button>
-        </form>
-        <p class="small text-muted mt-3 mb-0">
-          Demo: teacher / teacher123 — student1 / student123
-        </p>
+<style>
+  /* Scoped to the login page only — overrides base.html body bg via inline <style>
+     loaded as part of this page's content block. */
+  body {
+    background-color: #11161f;
+    background-image:
+      linear-gradient(135deg, rgba(15, 23, 42, 0.78) 0%, rgba(20, 24, 35, 0.62) 55%, rgba(15, 23, 42, 0.82) 100%),
+      url('https://images.unsplash.com/photo-1632823469850-2f77dd9c7f93?auto=format&fit=crop&w=1920&q=80');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+  }
+
+  /* Keep navbar perfectly readable — frosted white over the dark garage bg. */
+  .navbar {
+    background: rgba(255, 255, 255, 0.96) !important;
+    backdrop-filter: saturate(140%) blur(10px);
+    -webkit-backdrop-filter: saturate(140%) blur(10px);
+  }
+
+  /* Footer also reads against the dark bg. */
+  footer {
+    background: rgba(248, 249, 250, 0.94) !important;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+
+  /* Vertically center the card lower in the viewport (away from nav). */
+  .login-card-wrap {
+    min-height: calc(100vh - 240px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-top: 5rem;
+    padding-bottom: 3rem;
+  }
+
+  .login-card {
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45), 0 4px 12px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.55);
+  }
+
+  .login-card .card-header {
+    background: rgba(248, 249, 250, 0.92);
+  }
+
+  /* Subtle tagline visible against the dark bg, beneath the card. */
+  .login-tagline {
+    color: rgba(255, 255, 255, 0.85);
+    text-shadow: 0 1px 6px rgba(0, 0, 0, 0.6);
+    letter-spacing: 0.02em;
+  }
+  .login-tagline i {
+    color: var(--primary-orange);
+  }
+
+  /* Mobile: shorter offset, scroll bg (fixed is janky on iOS Safari). */
+  @media (max-width: 768px) {
+    body {
+      background-attachment: scroll;
+    }
+    .login-card-wrap {
+      padding-top: 2.5rem;
+      padding-bottom: 2rem;
+      min-height: calc(100vh - 180px);
+    }
+  }
+</style>
+
+<div class="login-card-wrap">
+  <div class="row justify-content-center w-100 m-0">
+    <div class="col-12 col-sm-10 col-md-7 col-lg-5 col-xl-4">
+      <div class="card login-card shadow-lg border-gold">
+        <div class="card-header text-center">
+          <i class="fas fa-car-side fa-2x text-gold mb-2"></i>
+          <h4 class="mb-0">Welcome to Car-Hoot</h4>
+        </div>
+        <div class="card-body">
+          <form method="post" novalidate action="">
+            {% csrf_token %}
+            {% if next %}
+              <input type="hidden" name="next" value="{{ next }}">
+            {% endif %}
+            {% if form.non_field_errors %}
+              <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+            {% endif %}
+            {% for field in form %}
+              <div class="mb-3">
+                <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% for err in field.errors %}
+                  <div class="text-danger small">{{ err }}</div>
+                {% endfor %}
+              </div>
+            {% endfor %}
+            <button type="submit" class="btn btn-gold w-100">
+              <i class="fas fa-sign-in-alt me-2"></i>Sign in
+            </button>
+          </form>
+          <p class="small text-muted mt-3 mb-0 text-center">
+            Demo: <code>teacher / teacher123</code> &nbsp;·&nbsp; <code>student1 / student123</code>
+          </p>
+        </div>
       </div>
+      <p class="login-tagline text-center small mt-3 mb-0">
+        <i class="fas fa-wrench me-1"></i>
+        Diagnostics &amp; automotive education — sign in to continue
+      </p>
     </div>
   </div>
 </div>

@@ -4,14 +4,390 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Car-Hoot{% endblock %}</title>
+  
+  <!-- Bootstrap 5 + Icons + Fonts -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
         integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
   {% block extra_head %}{% endblock %}
+
+  <style>
+    /* ===== CAR DEALER PREMIUM STYLE – ORANGE EDITION ===== */
+    :root {
+      --white: #ffffff;
+      --light-gray: #f8f9fa;
+      --medium-gray: #e9ecef;
+      --border-light: #dee2e6;
+      --text-dark: #212529;
+      --text-muted: #6c757d;
+      --black: #1a1a1a;
+      
+      /* 🟧 ORANGE – from your uploaded car */
+      --primary-orange: #FF8C00;       /* Main body orange */
+      --primary-orange-dark: #CC6A00;  /* Deep shadow orange */
+      --primary-orange-light: #FFA500; /* Highlight orange */
+      --primary-orange-very-light: #FFBF66; /* Background / hover */
+      
+      --shadow: 0 4px 24px rgba(0,0,0,0.08);
+      --shadow-hover: 0 8px 40px rgba(0,0,0,0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--white);
+      color: var(--text-dark);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--black);
+    }
+
+    .text-primary-orange {
+      color: var(--primary-orange) !important;
+    }
+
+    .bg-primary-orange {
+      background-color: var(--primary-orange) !important;
+    }
+
+    .border-primary-orange {
+      border-color: var(--primary-orange) !important;
+    }
+
+    /* Navbar – dealership style */
+    .navbar {
+      background: var(--white) !important;
+      border-bottom: 1px solid var(--border-light);
+      padding: 1rem 0;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    }
+
+    .navbar-brand {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--black) !important;
+      letter-spacing: -0.03em;
+    }
+
+    .navbar-brand i {
+      color: var(--primary-orange);
+      margin-right: 8px;
+    }
+
+    .navbar-nav .nav-link {
+      color: var(--text-dark) !important;
+      font-weight: 500;
+      padding: 0.5rem 1.2rem;
+      transition: color 0.2s ease;
+    }
+
+    .navbar-nav .nav-link:hover {
+      color: var(--primary-orange) !important;
+    }
+
+    .navbar-nav .nav-link.active {
+      color: var(--primary-orange) !important;
+    }
+
+    /* Buttons - orange (.btn-gold aliases login template) */
+    .btn-primary-orange,
+    .btn-gold {
+      background: var(--primary-orange);
+      color: var(--white);
+      border: none;
+      font-weight: 600;
+      padding: 0.5rem 1.5rem;
+      border-radius: 30px;
+      transition: all 0.3s ease;
+    }
+
+    .btn-primary-orange:hover,
+    .btn-gold:hover {
+      background: var(--primary-orange-dark);
+      color: var(--white);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(255, 140, 0, 0.4);
+    }
+
+    .text-gold {
+      color: var(--primary-orange) !important;
+    }
+
+    .border-gold {
+      border-color: rgba(255, 140, 0, 0.35) !important;
+    }
+
+    .btn-outline-primary-orange {
+      border: 2px solid var(--primary-orange);
+      color: var(--primary-orange);
+      background: transparent;
+      font-weight: 600;
+      padding: 0.5rem 1.5rem;
+      border-radius: 30px;
+      transition: all 0.3s ease;
+    }
+
+    .btn-outline-primary-orange:hover {
+      background: var(--primary-orange);
+      color: var(--white);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(255, 140, 0, 0.3);
+    }
+
+    /* Bootstrap primary → orange sitewide */
+    .btn-primary {
+      background: var(--primary-orange);
+      border-color: var(--primary-orange);
+      color: var(--white);
+      border-radius: 30px;
+      font-weight: 600;
+      padding: 0.5rem 1.5rem;
+    }
+
+    .btn-primary:hover,
+    .btn-primary:focus {
+      background: var(--primary-orange-dark);
+      border-color: var(--primary-orange-dark);
+      color: var(--white);
+    }
+
+    .btn-outline-primary {
+      border: 2px solid var(--primary-orange);
+      color: var(--primary-orange);
+      border-radius: 30px;
+      font-weight: 600;
+    }
+
+    .btn-outline-primary:hover {
+      background: var(--primary-orange);
+      border-color: var(--primary-orange);
+      color: var(--white);
+    }
+
+    /* Cards */
+    .card {
+      border: none;
+      background: var(--white);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      transition: all 0.2s ease;
+      overflow: hidden;
+    }
+
+    .card:hover {
+      box-shadow: var(--shadow-hover);
+      transform: translateY(-3px);
+    }
+
+    .card-header {
+      background: var(--light-gray);
+      border-bottom: 1px solid var(--border-light);
+      font-weight: 600;
+      padding: 1.25rem 1.5rem;
+      color: var(--black);
+    }
+
+    .card-body {
+      padding: 1.5rem;
+    }
+
+    /* Badges */
+    .badge-primary-orange {
+      background: var(--primary-orange);
+      color: var(--white);
+      font-weight: 600;
+      padding: 0.4rem 0.8rem;
+      border-radius: 30px;
+    }
+
+    .badge-secondary {
+      background: var(--medium-gray);
+      color: var(--text-dark);
+      font-weight: 500;
+      padding: 0.3rem 0.7rem;
+      border-radius: 30px;
+    }
+
+    /* Tables */
+    .table {
+      border-color: var(--border-light);
+    }
+
+    .table thead th {
+      border-bottom: 2px solid var(--primary-orange);
+      color: var(--black);
+      font-weight: 600;
+      background: var(--light-gray);
+    }
+
+    .table-striped tbody tr:nth-of-type(odd) td {
+      background: rgba(0,0,0,0.02);
+    }
+
+    /* Forms */
+    .form-control, .form-select {
+      border: 1px solid var(--border-light);
+      border-radius: 10px;
+      padding: 0.6rem 1rem;
+      background: var(--white);
+    }
+
+    .form-control:focus, .form-select:focus {
+      border-color: var(--primary-orange);
+      box-shadow: 0 0 0 0.25rem rgba(255, 140, 0, 0.15);
+    }
+
+    /* Alerts */
+    .alert {
+      border-radius: 12px;
+      border: none;
+    }
+
+    .alert-success {
+      background: #eaf5ea;
+      color: #2d6a4f;
+    }
+
+    .alert-danger {
+      background: #fce8e8;
+      color: #b71c1c;
+    }
+
+    .alert-warning {
+      background: #fef5e7;
+      color: #7d6608;
+    }
+
+    .alert-info {
+      background: #e8f0fe;
+      color: #1a5276;
+    }
+
+    /* Breadcrumbs */
+    .breadcrumb {
+      background: transparent;
+      padding: 0;
+      margin-bottom: 1.5rem;
+    }
+
+    .breadcrumb-item a {
+      color: var(--primary-orange);
+      text-decoration: none;
+    }
+
+    .breadcrumb-item a:hover {
+      text-decoration: underline;
+    }
+
+    .breadcrumb-item.active {
+      color: var(--text-muted);
+    }
+
+    /* Progress bars */
+    .progress {
+      background: var(--medium-gray);
+      border-radius: 30px;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      background: var(--primary-orange);
+      font-weight: 600;
+    }
+
+    /* Footer */
+    footer {
+      margin-top: auto;
+      border-top: 1px solid var(--border-light);
+      padding: 2.5rem 0;
+      color: var(--text-muted);
+      font-size: 0.875rem;
+      background: var(--light-gray);
+    }
+
+    .footer-links a {
+      color: var(--text-muted);
+      margin-right: 1.2rem;
+      text-decoration: none;
+    }
+
+    .footer-links a:hover {
+      color: var(--primary-orange);
+    }
+
+    /* Hero / landing section */
+    .hero-section {
+      background: var(--light-gray);
+      padding: 4rem 0 5rem;
+      border-radius: 0 0 60px 60px;
+      margin-bottom: 3rem;
+    }
+
+    .hero-section h1 {
+      font-size: 3.2rem;
+      font-weight: 800;
+    }
+
+    .hero-section .lead {
+      font-size: 1.2rem;
+      color: var(--text-muted);
+      max-width: 600px;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .hero-section h1 {
+        font-size: 2.2rem;
+      }
+      .hero-section {
+        padding: 2.5rem 0 3rem;
+      }
+    }
+
+    .shadow-premium {
+      box-shadow: var(--shadow);
+    }
+
+    /* Car PNG shipped with opaque black background — knockout via blend on light hero */
+    .landing-hero-car-col {
+      isolation: isolate;
+    }
+
+    .landing-hero-car {
+      max-height: min(380px, 52vh);
+      width: auto;
+      max-width: 100%;
+      height: auto;
+      object-fit: contain;
+      object-position: bottom center;
+      mix-blend-mode: lighten;
+      filter: drop-shadow(0 18px 32px rgba(35, 40, 50, 0.12));
+    }
+
+    .shadow-premium-hover:hover {
+      box-shadow: var(--shadow-hover);
+    }
+
+  </style>
 </head>
-<body class="bg-light">
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+<body>
+
+<!-- Navbar – clean, premium, orange dealership style -->
+<nav class="navbar navbar-expand-lg navbar-light sticky-top">
   <div class="container">
-    <a class="navbar-brand" href="{% url 'courses:landing' %}">Car-Hoot</a>
+    <a class="navbar-brand" href="{% url 'courses:landing' %}">
+      <i class="fas fa-car-side"></i> Car-Hoot
+    </a>
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMain">
       <span class="navbar-toggler-icon"></span>
     </button>
@@ -27,22 +403,23 @@
       </ul>
       <ul class="navbar-nav ms-auto">
         {% if user.is_authenticated %}
-          <li class="nav-item"><span class="navbar-text me-3">{{ user.username }}</span></li>
+          <li class="nav-item"><span class="navbar-text me-3 text-muted">{{ user.username }}</span></li>
           <li class="nav-item">
             <form method="post" action="{% url 'accounts:logout' %}" class="d-inline">
               {% csrf_token %}
-              <button type="submit" class="btn btn-outline-light btn-sm">Log out</button>
+              <button type="submit" class="btn btn-outline-primary-orange btn-sm">Log out</button>
             </form>
           </li>
         {% else %}
-          <li class="nav-item"><a class="nav-link" href="{% url 'accounts:login' %}">Log in</a></li>
+          <li class="nav-item"><a class="nav-link" href="{% url 'accounts:login' %}"><i class="fas fa-sign-in-alt me-1"></i>Log in</a></li>
         {% endif %}
       </ul>
     </div>
   </div>
 </nav>
 
-<main class="{% block main_classes %}container pb-5{% endblock %}">
+<!-- Main content -->
+<main class="{% block main_classes %}container pb-5 flex-grow-1{% endblock %}">
   {% if messages %}
     {% for message in messages %}
       <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
@@ -53,6 +430,22 @@
   {% endif %}
   {% block content %}{% endblock %}
 </main>
+
+<!-- Footer -->
+<footer>
+  <div class="container">
+    <div class="row align-items-center">
+      <div class="col-md-6">
+        <span>&copy; Car-Hoot 2026 — automotive electronics learning</span>
+      </div>
+      <div class="col-md-6 text-md-end footer-links">
+        {% if user.is_staff or user_profile and user_profile.role == 'teacher' %}
+          <a href="{% url 'accounts:admin_panel' %}">Admin panel</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"

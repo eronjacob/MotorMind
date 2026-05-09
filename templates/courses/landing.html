@@ -1,24 +1,77 @@
 {% extends "base.html" %}
-{% block title %}Car-Hoot — Automotive electronics learning{% endblock %}
+{% load static %}
+{% block title %}Car-Hoot — Automotive Electronics Education{% endblock %}
 {% block content %}
-<div class="p-5 mb-4 bg-white rounded shadow-sm">
-  <h1 class="display-5">Car-Hoot</h1>
-  <p class="lead">
-    An automotive electronics education platform: training videos, structured sections,
-    quizzes, and practical AR-style diagnostic tasks—built for classrooms and hackathon demos.
-  </p>
-  <p class="text-muted">
-    Teachers publish content; students learn, get assessed, and practice fault-finding on
-    <strong>virtual</strong> scenarios (healthy car, simulated readings).
-  </p>
-  <div class="d-flex gap-2 flex-wrap">
-    <a class="btn btn-primary" href="{% url 'accounts:login' %}">Log in</a>
-    {% if user.is_authenticated %}
-      <a class="btn btn-outline-primary" href="{% url 'accounts:dashboard' %}">Dashboard</a>
-      <a class="btn btn-outline-secondary" href="{% url 'courses:course_list' %}">Browse courses</a>
-    {% else %}
-      <a class="btn btn-outline-secondary" href="{% url 'accounts:login' %}">Dashboard (requires login)</a>
-    {% endif %}
+
+<!-- Hero – premium dealership-style landing -->
+<div class="hero-section">
+  <div class="row align-items-center">
+    <div class="col-lg-7">
+        <h1 class="display-4 fw-bold mb-3">
+          <span class="text-primary-orange">Master</span> Automotive Electronics
+        </h1>
+        <p class="lead mb-4">
+          Car-Hoot brings you <strong>structured video courses</strong>,
+          <strong>interactive quizzes</strong>, and <strong>AR diagnostic tasks</strong>
+          — all designed for classrooms and hands-on practice.
+        </p>
+        <div class="d-flex gap-3 flex-wrap">
+          <a class="btn btn-primary-orange btn-lg" href="{% url 'accounts:login' %}">
+            <i class="fas fa-sign-in-alt me-2"></i>Start learning
+          </a>
+          {% if user.is_authenticated %}
+            <a class="btn btn-outline-primary-orange btn-lg" href="{% url 'accounts:dashboard' %}">
+              <i class="fas fa-chart-simple me-2"></i>Dashboard
+            </a>
+          {% endif %}
+          <a class="btn btn-outline-primary-orange btn-lg" href="{% url 'courses:course_list' %}">
+            <i class="fas fa-book-open me-2"></i>Browse courses
+          </a>
+        </div>
+    </div>
+    <div class="col-lg-5 d-none d-lg-block text-center align-self-end landing-hero-car-col">
+        <img src="{% static 'images/hero-sport-car.png' %}"
+             alt="Sport coupe illustration for Car-Hoot automotive training"
+             class="img-fluid rounded-4 landing-hero-car">
+    </div>
   </div>
 </div>
+
+<!-- Three feature cards -->
+<div class="row g-4 mt-2">
+  <div class="col-md-4">
+      <div class="card h-100 text-center p-3">
+        <div class="card-body">
+          <div class="mb-3">
+            <i class="fas fa-video fa-3x text-primary-orange"></i>
+          </div>
+          <h5 class="card-title">Training Videos</h5>
+          <p class="card-text text-muted">Watch structured lessons with timestamped sections for precise learning.</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card h-100 text-center p-3">
+        <div class="card-body">
+          <div class="mb-3">
+            <i class="fas fa-brain fa-3x text-primary-orange"></i>
+          </div>
+          <h5 class="card-title">Quizzes &amp; Assessments</h5>
+          <p class="card-text text-muted">Test your knowledge with pass-mark graded quizzes and track progress.</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card h-100 text-center p-3">
+        <div class="card-body">
+          <div class="mb-3">
+            <i class="fas fa-tools fa-3x text-primary-orange"></i>
+          </div>
+          <h5 class="card-title">AR Diagnostic Tasks</h5>
+          <p class="card-text text-muted">Practice fault-finding on virtual scenarios with step-by-step guidance.</p>
+        </div>
+      </div>
+  </div>
+</div>
+
 {% endblock %}
