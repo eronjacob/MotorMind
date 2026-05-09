@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}{{ resource.title }} — Resource{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{% url 'resources:dashboard' %}">Resources</a></li>
+    <li class="breadcrumb-item active">{{ resource.title }}</li>
+  </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-start mb-3">
+  <div>
+    <h1 class="h3">{{ resource.title }}</h1>
+    <p class="text-muted mb-0">{{ resource.get_resource_type_display }} · {{ resource.original_filename }}</p>
+  </div>
+  <div class="btn-group">
+    <a class="btn btn-outline-secondary btn-sm" href="{% url 'resources:dashboard' %}">Back</a>
+    <a class="btn btn-outline-primary btn-sm" href="{% url 'resources:edit' resource.pk %}">Edit metadata</a>
+    <a class="btn btn-outline-info btn-sm" href="{% url 'resources:test_retrieval' %}?resource_id={{ resource.pk }}">Search this resource</a>
+  </div>
+</div>
+
+{% if request.GET.job %}
+<div class="card shadow-sm mb-3">
+  <div class="card-body">
+    <div class="progress mb-2" style="height: 26px;">
+      <div class="progress-bar" id="jobBar" style="width: 0%">0%</div>
+    </div>
+    <p class="small mb-0" id="jobMsg">Polling job {{ request.GET.job }}…</p>
+  </div>
+</div>
+{% endif %}
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card shadow-sm">
+      <div class="card-header fw-semibold">Metadata</div>
+      <ul class="list-group list-group-flush small">
+        <li class="list-group-item"><strong>ISBN:</strong> {{ resource.isbn|default:"—" }}</li>
+        <li class="list-group-item d-flex flex-wrap align-items-center gap-2">
+          <span><strong>Metadata lookup:</strong> {{ resource.get_metadata_lookup_status_display }}</span>
+          {% if resource.metadata_lookup_status == "failed" %}
+            <span class="badge bg-warning text-dark">Lookup failed</span>
+          {% elif resource.metadata_lookup_status == "success" %}
+            <span class="badge bg-success">OK</span>
+          {% endif %}
+        </li>
+        {% if resource.metadata_lookup_error %}
+          <li class="list-group-item text-warning"><strong>Lookup error:</strong> {{ resource.metadata_lookup_error }}</li>
+        {% endif %}
+        <li class="list-group-item"><strong>Author:</strong> {{ resource.author|default:"—" }}</li>
+        <li class="list-group-item"><strong>Source title:</strong> {{ resource.source_title|default:"—" }}</li>
+        <li class="list-group-item"><strong>Publisher / year:</strong>
+          {{ resource.publisher|default:"—" }}{% if resource.year %} · {{ resource.year }}{% else %} · —{% endif %}
+        </li>
+        <li class="list-group-item"><strong>Edition:</strong> {{ resource.edition|default:"—" }}</li>
+        <li class="list-group-item"><strong>Pages (metadata):</strong> {{ resource.number_of_pages|default:"—" }}</li>
+        <li class="list-group-item"><strong>Description:</strong> {{ resource.description|default:"—"|linebreaksbr }}</li>
+        <li class="list-group-item"><strong>Vector collection:</strong> <code>{{ resource.vector_collection }}</code></li>
+        <li class="list-group-item"><strong>Status:</strong> {{ resource.get_status_display }}</li>
+        <li class="list-group-item"><strong>Chunk count (Chroma):</strong> {{ resource.chunk_count }}</li>
+        {% if resource.error_message %}
+          <li class="list-group-item text-danger"><strong>Error:</strong> {{ resource.error_message }}</li>
+        {% endif %}
+      </ul>
+      {% if resource.raw_metadata %}
+        <div class="card-footer small">
+          <details>
+            <summary>Raw metadata (from lookup providers)</summary>
+            <pre class="mt-2 mb-0 small bg-light p-2 rounded" style="white-space: pre-wrap;">{{ resource.raw_metadata }}</pre>
+          </details>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card shadow-sm mb-3">
+      <div class="card-header fw-semibold">Linked courses</div>
+      <div class="card-body">
+        {% for c in resource.courses.all %}
+          <span class="badge bg-secondary me-1 mb-1">{{ c.title }}</span>
+        {% empty %}
+          <span class="text-muted">None (optional)</span>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="d-grid gap-2">
+      {% if resource.isbn %}
+      <form method="post" action="{% url 'resources:lookup_metadata' resource.pk %}">
+        {% csrf_token %}
+        <button class="btn btn-outline-primary w-100" type="submit">Retry metadata lookup</button>
+      </form>
+      {% endif %}
+      <form method="post" action="{% url 'resources:reingest' resource.pk %}" onsubmit="return confirm('Re-ingest? Old vectors for this resource will be replaced.');">
+        {% csrf_token %}
+        <button class="btn btn-warning w-100" type="submit">Re-ingest</button>
+      </form>
+      <form method="post" action="{% url 'resources:delete' resource.pk %}" onsubmit="return confirm('Delete resource, file, and all vectors?');">
+        {% csrf_token %}
+        <button class="btn btn-danger w-100" type="submit">Delete</button>
+      </form>
+    </div>
+    <p class="small text-muted mt-2">
+      Full chunk text is only in ChromaDB documents — not listed here by design.
+    </p>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if request.GET.job %}
+<script>
+(function () {
+  const jobId = "{{ request.GET.job }}";
+  const bar = document.getElementById('jobBar');
+  const msg = document.getElementById('jobMsg');
+  function poll() {
+    fetch(`/admin-panel/resources/jobs/${jobId}/progress/`, { credentials: 'same-origin' })
+      .then(r => r.json())
+      .then(pj => {
+        const pct = pj.progress_percent ?? 0;
+        bar.style.width = pct + '%';
+        bar.textContent = pct + '%';
+        msg.textContent = pj.message || pj.status;
+        if (pj.status !== 'completed' && pj.status !== 'failed') setTimeout(poll, 700);
+      })
+      .catch(() => {});
+  }
+  poll();
+})();
+</script>
+{% endif %}
+{% endblock %}

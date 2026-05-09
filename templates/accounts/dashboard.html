@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Car-Hoot{% endblock %}
+{% block content %}
+<h1 class="h3 mb-3">Dashboard</h1>
+
+{% if profile and profile.role == 'teacher' %}
+  <p class="text-muted">Teacher tools and recent student activity.</p>
+  <div class="row g-3">
+    <div class="col-md-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <h2 class="h6">Manage content</h2>
+          <ul class="mb-0">
+            <li><a href="{% url 'accounts:admin_panel' %}">Custom admin panel</a></li>
+            <li><a href="/admin/">Django admin</a> (full CRUD)</li>
+            <li><a href="{% url 'courses:course_list' %}">View courses (student preview)</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <h2 class="h6">Your recent courses</h2>
+          <ul class="mb-0 small">
+            {% for c in courses_managed %}
+              <li><a href="{% url 'courses:course_detail' c.pk %}">{{ c.title }}</a></li>
+            {% empty %}
+              <li class="text-muted">No courses created yet.</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card shadow-sm mt-4">
+    <div class="card-header fw-semibold">Recent quiz attempts</div>
+    <div class="table-responsive">
+      <table class="table table-sm mb-0">
+        <thead><tr><th>Student</th><th>Quiz</th><th>Score</th><th>Pass</th><th>When</th></tr></thead>
+        <tbody>
+          {% for a in recent_quiz_attempts %}
+            <tr>
+              <td>{{ a.student.username }}</td>
+              <td>{{ a.quiz.title }}</td>
+              <td>{{ a.score }}%</td>
+              <td>{% if a.passed %}Yes{% else %}No{% endif %}</td>
+              <td class="small">{{ a.created_at }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="5" class="text-muted">No attempts yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card shadow-sm mt-3">
+    <div class="card-header fw-semibold">Recent AR task progress</div>
+    <div class="table-responsive">
+      <table class="table table-sm mb-0">
+        <thead><tr><th>Student</th><th>Task</th><th>Status</th><th>Updated</th></tr></thead>
+        <tbody>
+          {% for p in recent_ar_progress %}
+            <tr>
+              <td>{{ p.student.username }}</td>
+              <td>{{ p.task.title }}</td>
+              <td>{{ p.get_status_display }}</td>
+              <td class="small">{{ p.updated_at }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="4" class="text-muted">No progress yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+{% else %}
+  <p class="text-muted">Your learning overview.</p>
+  <div class="row g-3">
+    <div class="col-lg-6">
+      <div class="card shadow-sm">
+        <div class="card-header fw-semibold">Courses</div>
+        <ul class="list-group list-group-flush">
+          {% for c in courses_available %}
+            <li class="list-group-item d-flex justify-content-between">
+              <span>{{ c.title }}</span>
+              <a class="btn btn-sm btn-primary" href="{% url 'courses:course_detail' c.pk %}">Open</a>
+            </li>
+          {% empty %}
+            <li class="list-group-item text-muted">No courses available.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="card shadow-sm mb-3">
+        <div class="card-header fw-semibold">Quiz attempts</div>
+        <ul class="list-group list-group-flush small">
+          {% for a in my_quiz_attempts %}
+            <li class="list-group-item">
+              {{ a.quiz.title }} — <strong>{{ a.score }}%</strong>
+              ({% if a.passed %}pass{% else %}retry{% endif %})
+            </li>
+          {% empty %}
+            <li class="list-group-item text-muted">No quiz attempts yet.</li>
+          {% endfor %}
+        </ul>
+      </div>
+      <div class="card shadow-sm">
+        <div class="card-header fw-semibold">AR tasks</div>
+        <ul class="list-group list-group-flush small">
+          {% for p in my_ar_progress %}
+            <li class="list-group-item d-flex justify-content-between">
+              <span>{{ p.task.title }} — {{ p.get_status_display }}</span>
+              <a class="btn btn-sm btn-outline-primary"
+                 href="{% url 'ar_tasks:task_detail' p.task.course_id p.task_id %}">Open</a>
+            </li>
+          {% empty %}
+            <li class="list-group-item text-muted">No AR progress yet.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}

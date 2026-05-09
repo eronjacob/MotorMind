@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h1 class="h4 mb-3">{% block form_title %}{% endblock %}</h1>
+        <form method="post" novalidate>
+          {% csrf_token %}
+          {% for field in form %}
+            <div class="mb-3">
+              <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+              {{ field }}
+              {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+              {% for err in field.errors %}<div class="text-danger small">{{ err }}</div>{% endfor %}
+            </div>
+          {% endfor %}
+          <button type="submit" class="btn btn-primary">Save</button>
+          <a class="btn btn-outline-secondary" href="{% if cancel_url %}{{ cancel_url }}{% else %}{% url 'accounts:admin_panel' %}{% endif %}">Cancel</a>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

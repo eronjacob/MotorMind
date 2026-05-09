@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Log in — Car-Hoot{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-5">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h1 class="h4 mb-3">Log in</h1>
+        <form method="post" novalidate>
+          {% csrf_token %}
+          {% if form.non_field_errors %}
+            <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+          {% endif %}
+          {% for field in form %}
+            <div class="mb-3">
+              <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+              {{ field.errors }}
+              {{ field }}
+            </div>
+          {% endfor %}
+          <button type="submit" class="btn btn-primary w-100">Sign in</button>
+        </form>
+        <p class="small text-muted mt-3 mb-0">
+          Demo: teacher / teacher123 — student1 / student123
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

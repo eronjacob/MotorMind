@@ -1,0 +1,7 @@
+Fuse testing quick notes:
+- Set the multimeter to DC volts.
+- Use a known good ground reference.
+- Test both tabs of the fuse.
+- 12V on both sides usually means the fuse element is intact and both sides share the same potential.
+- 12V on one side and 0V on the other often suggests a blown/open fuse.
+- 0V on both sides may mean no upstream supply or a measurement reference issue.

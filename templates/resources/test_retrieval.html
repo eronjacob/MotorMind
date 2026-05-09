@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Retrieval test — Car-Hoot{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">Retrieval test</h1>
+  <a class="btn btn-outline-secondary btn-sm" href="{% url 'resources:dashboard' %}">Resources</a>
+</div>
+
+{% if error %}
+  <div class="alert alert-danger">{{ error }}</div>
+{% endif %}
+
+<form method="post" class="card shadow-sm mb-4">
+  {% csrf_token %}
+  <div class="card-body">
+    <div class="mb-3">
+      <label class="form-label" for="queryField">Query</label>
+      <textarea class="form-control" id="queryField" name="query" rows="3" required>{{ query }}</textarea>
+    </div>
+    <div class="row g-2">
+      <div class="col-md-2">
+        <label class="form-label" for="topkField">top_k</label>
+        <input class="form-control" id="topkField" name="top_k" type="number" min="1" max="50" value="{{ top_k }}">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label" for="courseField">course_id</label>
+        <input class="form-control" id="courseField" name="course_id" value="{{ course_id }}" placeholder="optional">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label" for="rtypeField">resource_type</label>
+        <input class="form-control" id="rtypeField" name="resource_type" value="{{ resource_type }}" placeholder="optional">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label" for="ridField">resource_id</label>
+        <input class="form-control" id="ridField" name="resource_id" value="{{ resource_id }}" placeholder="optional">
+      </div>
+    </div>
+    <button class="btn btn-primary mt-3" type="submit">Search</button>
+  </div>
+</form>
+
+{% if results %}
+  <h2 class="h5">Results</h2>
+  {% for row in results %}
+    <div class="card shadow-sm mb-3">
+      <div class="card-body">
+        <div class="d-flex justify-content-between">
+          <div>
+            <span class="badge bg-dark">{{ row.vector_id }}</span>
+            {% if row.score is not None %}<span class="badge bg-info text-dark ms-1">score ≈ {{ row.score|floatformat:3 }}</span>{% endif %}
+          </div>
+          {% if row.resource.id %}
+            <a class="btn btn-sm btn-outline-primary" href="{% url 'resources:detail' row.resource.id %}">Resource #{{ row.resource.id }}</a>
+          {% endif %}
+        </div>
+        <p class="small text-muted mb-1"><strong>Citation:</strong> {{ row.citation }}</p>
+        <p class="small mb-1"><strong>Title:</strong> {{ row.resource.title }} · <strong>Author:</strong> {{ row.resource.author|default:"—" }}</p>
+        <p class="small mb-2"><strong>Courses:</strong>
+          {% for c in row.resource.courses %}
+            <span class="badge bg-secondary">{{ c.title }}</span>
+          {% empty %}<span class="text-muted">—</span>{% endfor %}
+        </p>
+        <pre class="small bg-light p-2 rounded" style="white-space: pre-wrap;">{{ row.text|truncatechars:1200 }}</pre>
+        <details class="small">
+          <summary>Metadata</summary>
+          <pre class="mt-2">{{ row.metadata|default_if_none:"{}" }}</pre>
+        </details>
+      </div>
+    </div>
+  {% endfor %}
+{% endif %}
+{% endblock %}

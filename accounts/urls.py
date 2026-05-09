@@ -1,0 +1,93 @@
+from django.urls import path
+
+from . import manage_views
+from .views import AdminPanelView, CarHootLoginView, CarHootLogoutView, DashboardView
+
+app_name = "accounts"
+
+urlpatterns = [
+    path("login/", CarHootLoginView.as_view(), name="login"),
+    path("logout/", CarHootLogoutView.as_view(), name="logout"),
+    path("dashboard/", DashboardView.as_view(), name="dashboard"),
+    path("admin-panel/", AdminPanelView.as_view(), name="admin_panel"),
+    path(
+        "admin-panel/manage/course/add/",
+        manage_views.CourseCreateView.as_view(),
+        name="manage_course_add",
+    ),
+    path(
+        "admin-panel/manage/course/<int:course_pk>/videos/add/",
+        manage_views.NestedTrainingVideoCreateView.as_view(),
+        name="manage_course_video_add",
+    ),
+    path(
+        "admin-panel/manage/course/<int:course_pk>/sections/add/",
+        manage_views.NestedVideoSectionCreateView.as_view(),
+        name="manage_course_section_add",
+    ),
+    path(
+        "admin-panel/manage/course/<int:course_pk>/quizzes/add/",
+        manage_views.NestedQuizCreateView.as_view(),
+        name="manage_course_quiz_add",
+    ),
+    path(
+        "admin-panel/manage/course/<int:course_pk>/questions/add/",
+        manage_views.NestedQuestionCreateView.as_view(),
+        name="manage_course_question_add",
+    ),
+    path(
+        "admin-panel/manage/course/<int:course_pk>/choices/add/",
+        manage_views.NestedAnswerChoiceCreateView.as_view(),
+        name="manage_course_choice_add",
+    ),
+    path(
+        "admin-panel/manage/course/<int:course_pk>/ar-tasks/add/",
+        manage_views.NestedARTaskCreateView.as_view(),
+        name="manage_course_ar_add",
+    ),
+    path(
+        "admin-panel/manage/course/<int:course_pk>/ar-steps/add/",
+        manage_views.NestedARTaskStepCreateView.as_view(),
+        name="manage_course_ar_step_add",
+    ),
+    path(
+        "admin-panel/manage/course/<int:pk>/",
+        manage_views.CourseHubView.as_view(),
+        name="manage_course",
+    ),
+    path(
+        "admin-panel/manage/video/add/",
+        manage_views.TrainingVideoCreateView.as_view(),
+        name="manage_video_add",
+    ),
+    path(
+        "admin-panel/manage/section/add/",
+        manage_views.VideoSectionCreateView.as_view(),
+        name="manage_section_add",
+    ),
+    path(
+        "admin-panel/manage/quiz/add/",
+        manage_views.QuizCreateView.as_view(),
+        name="manage_quiz_add",
+    ),
+    path(
+        "admin-panel/manage/question/add/",
+        manage_views.QuestionCreateView.as_view(),
+        name="manage_question_add",
+    ),
+    path(
+        "admin-panel/manage/choice/add/",
+        manage_views.AnswerChoiceCreateView.as_view(),
+        name="manage_choice_add",
+    ),
+    path(
+        "admin-panel/manage/ar-task/add/",
+        manage_views.ARTaskCreateView.as_view(),
+        name="manage_ar_task_add",
+    ),
+    path(
+        "admin-panel/manage/ar-step/add/",
+        manage_views.ARTaskStepCreateView.as_view(),
+        name="manage_ar_step_add",
+    ),
+]

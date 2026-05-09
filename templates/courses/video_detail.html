@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}{{ video.title }} — Car-Hoot{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{% url 'courses:course_list' %}">Courses</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'courses:course_detail' video.course_id %}">{{ video.course.title }}</a></li>
+    <li class="breadcrumb-item active">{{ video.title }}</li>
+  </ol>
+</nav>
+
+<h1 class="h3">{{ video.title }}</h1>
+<p class="text-muted">{{ video.description }}</p>
+
+<div class="ratio ratio-16x9 mb-3 bg-dark rounded overflow-hidden">
+  {% if youtube_id %}
+    <iframe
+      src="https://www.youtube.com/embed/{{ youtube_id }}?start={{ start_seconds }}&rel=0"
+      title="{{ video.title }}"
+      allowfullscreen
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+      referrerpolicy="strict-origin-when-cross-origin">
+    </iframe>
+  {% else %}
+    <div class="d-flex align-items-center justify-content-center text-white small p-3">
+      <div>
+        <p>Non-YouTube URL — open directly or embed later.</p>
+        <a class="btn btn-light btn-sm" href="{{ video.video_url }}" target="_blank" rel="noopener">Open video</a>
+        {# TODO: support direct MP4 with <video> and currentTime from ?t= #}
+      </div>
+    </div>
+  {% endif %}
+</div>
+
+<p class="small">
+  Jump to time (seconds) via URL: <code>?t=90</code> — current start: <strong>{{ start_seconds }}</strong>s
+</p>
+
+<div class="card shadow-sm mb-3">
+  <div class="card-header fw-semibold">Sections</div>
+  <div class="card-body">
+    <div class="d-flex flex-wrap gap-2">
+      {% for s in video.sections.all %}
+        <a class="btn btn-outline-secondary btn-sm"
+           href="{% url 'courses:video_detail' video.course_id video.pk %}?t={{ s.start_seconds }}">
+          {{ s.title }} ({{ s.start_seconds }}s)
+        </a>
+      {% empty %}
+        <span class="text-muted">No sections defined.</span>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-header fw-semibold">Transcript</div>
+  <div class="card-body small" style="white-space: pre-wrap;">{{ video.transcript|default:"—" }}</div>
+</div>
+{% endblock %}

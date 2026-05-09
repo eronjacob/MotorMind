@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Quiz result — {{ quiz.title }}{% endblock %}
+{% block content %}
+<h1 class="h3 mb-3">{{ quiz.title }}</h1>
+
+{% if last_attempt %}
+  <div class="alert {% if last_attempt.passed %}alert-success{% else %}alert-warning{% endif %}">
+    Score: <strong>{{ last_attempt.score }}%</strong>
+    {% if last_attempt.passed %}
+      — Passed
+    {% else %}
+      — Not yet passing (need {{ quiz.pass_mark }}%)
+    {% endif %}
+  </div>
+  <p class="small text-muted">Recorded at {{ last_attempt.created_at }}</p>
+{% else %}
+  <p class="text-muted">No attempt recorded yet. <a href="{% url 'quizzes:quiz_take' quiz.pk %}">Take the quiz</a>.</p>
+{% endif %}
+
+<a class="btn btn-primary" href="{% url 'quizzes:quiz_take' quiz.pk %}">Retry</a>
+<a class="btn btn-outline-secondary" href="{% url 'courses:course_detail' quiz.course_id %}">Back to course</a>
+{% endblock %}

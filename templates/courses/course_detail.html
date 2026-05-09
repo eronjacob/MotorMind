@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}{{ course.title }} — Car-Hoot{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{% url 'courses:course_list' %}">Courses</a></li>
+    <li class="breadcrumb-item active">{{ course.title }}</li>
+  </ol>
+</nav>
+
+<h1 class="mb-2">{{ course.title }}</h1>
+<p class="text-muted">{{ course.description }}</p>
+
+<div class="row g-4 mt-2">
+  <div class="col-lg-6">
+    <div class="card shadow-sm">
+      <div class="card-header fw-semibold">Training videos</div>
+      <ul class="list-group list-group-flush">
+        {% for v in course.videos.all %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <div>
+              <strong>{{ v.title }}</strong>
+              <div class="small text-muted">{{ v.description|truncatewords:12 }}</div>
+            </div>
+            <a class="btn btn-sm btn-outline-primary"
+               href="{% url 'courses:video_detail' course.pk v.pk %}">Watch</a>
+          </li>
+        {% empty %}
+          <li class="list-group-item text-muted">No videos yet.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="card shadow-sm mb-3">
+      <div class="card-header fw-semibold">Video sections (outline)</div>
+      <div class="card-body small">
+        {% for v in course.videos.all %}
+          <p class="fw-semibold mb-1">{{ v.title }}</p>
+          <ul>
+            {% for s in v.sections.all %}
+              <li>
+                {{ s.title }}
+                ({{ s.start_seconds }}s–{{ s.end_seconds }}s)
+                <a href="{% url 'courses:video_detail' course.pk v.pk %}?t={{ s.start_seconds }}">Jump</a>
+              </li>
+            {% empty %}
+              <li class="text-muted">No sections for this video.</li>
+            {% endfor %}
+          </ul>
+        {% empty %}
+          <p class="text-muted mb-0">No outline yet.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card shadow-sm mt-4">
+  <div class="card-header fw-semibold">Quizzes</div>
+  <ul class="list-group list-group-flush">
+    {% for q in course.quizzes.all %}
+      <li class="list-group-item d-flex justify-content-between align-items-center">
+        <div>
+          <strong>{{ q.title }}</strong>
+          <span class="badge bg-secondary ms-2">Pass {{ q.pass_mark }}%</span>
+        </div>
+        <div class="d-flex gap-2">
+          <a class="btn btn-sm btn-primary" href="{% url 'quizzes:quiz_take' q.pk %}">Start quiz</a>
+          <a class="btn btn-sm btn-outline-secondary" href="{% url 'quizzes:quiz_result' q.pk %}">Last result</a>
+        </div>
+      </li>
+    {% empty %}
+      <li class="list-group-item text-muted">No quizzes yet.</li>
+    {% endfor %}
+  </ul>
+</div>
+
+<div class="card shadow-sm mt-4">
+  <div class="card-header fw-semibold">AR practical tasks</div>
+  <ul class="list-group list-group-flush">
+    {% for t in course.ar_tasks.all %}
+      <li class="list-group-item d-flex justify-content-between align-items-center">
+        <div>
+          <strong>{{ t.title }}</strong>
+          <div class="small text-muted">{{ t.get_target_object_display }} · {{ t.get_difficulty_display }}</div>
+        </div>
+        <a class="btn btn-sm btn-outline-primary" href="{% url 'ar_tasks:task_detail' course.pk t.pk %}">Open task</a>
+      </li>
+    {% empty %}
+      <li class="list-group-item text-muted">No AR tasks yet.</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endblock %}

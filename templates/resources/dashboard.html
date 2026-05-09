@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% block title %}Resource library — Car-Hoot{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">Resource library / vector search</h1>
+  <a class="btn btn-outline-secondary btn-sm" href="{% url 'accounts:admin_panel' %}">Back to admin panel</a>
+</div>
+<p class="text-muted">
+  Upload learning files. Text is chunked and embedded into ChromaDB for semantic retrieval (RAG-ready).
+  <strong>Chunk text is not stored in SQLite</strong> — only metadata and <code>chunk_count</code> live here.
+</p>
+
+<div class="card shadow-sm mb-4" id="uploadCard">
+  <div class="card-header fw-semibold">Upload resource</div>
+  <div class="card-body">
+    <div class="progress mb-3 d-none" id="ingestProgressWrap" style="height: 28px;">
+      <div class="progress-bar progress-bar-striped progress-bar-animated" id="ingestProgressBar" role="progressbar" style="width: 0%">0%</div>
+    </div>
+    <p class="small text-muted d-none" id="ingestStatusText"></p>
+
+    <div class="alert alert-info small">
+      <strong>Book PDFs:</strong> rename the file to its <strong>ISBN</strong> before uploading, for example
+      <code>9780415725774.pdf</code> or <code>978-0-415-72577-4.pdf</code>. Car-Hoot validates the checksum and fetches metadata automatically.
+      <span class="d-block mt-1 text-muted">Plain text / Markdown / DOCX uploads use the filename as a working title; ISBN is only required when the resource type is <em>book</em> (PDFs default to book).</span>
+    </div>
+
+    <form id="resourceUploadForm" method="post" action="{% url 'resources:upload' %}" enctype="multipart/form-data" novalidate>
+      {% csrf_token %}
+      {% for field in upload_form %}
+        <div class="mb-3">
+          <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+          {% for err in field.errors %}<div class="text-danger small">{{ err }}</div>{% endfor %}
+        </div>
+      {% endfor %}
+      <button type="submit" class="btn btn-primary" id="uploadSubmitBtn">Upload &amp; ingest</button>
+      <a class="btn btn-outline-secondary" href="{% url 'resources:test_retrieval' %}">Test retrieval</a>
+    </form>
+    <p class="small text-muted mt-2 mb-0">
+      Non-JS fallback: submit runs synchronously (may take a bit). With JavaScript enabled, a progress bar polls the job endpoint.
+    </p>
+  </div>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-header fw-semibold">Resources</div>
+  <div class="table-responsive">
+    <table class="table table-sm table-striped mb-0 align-middle">
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>ISBN</th>
+          <th>Type</th>
+          <th>Author</th>
+          <th>Publisher / year</th>
+          <th>Lookup</th>
+          <th>Courses</th>
+          <th>Status</th>
+          <th>Chunks</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in resources %}
+          <tr>
+            <td><a href="{% url 'resources:detail' r.pk %}">{{ r.title }}</a></td>
+            <td class="small text-nowrap">{{ r.isbn|default:"—" }}</td>
+            <td>{{ r.get_resource_type_display }}</td>
+            <td class="small">{{ r.author|default:"—" }}</td>
+            <td class="small">{{ r.publisher|default:"—" }}{% if r.year %} · {{ r.year }}{% endif %}</td>
+            <td class="small text-nowrap">
+              {% if r.metadata_lookup_status == "failed" %}
+                <span class="badge bg-warning text-dark" title="{{ r.metadata_lookup_error|default:'' }}">Failed</span>
+              {% else %}
+                {{ r.get_metadata_lookup_status_display }}
+              {% endif %}
+            </td>
+            <td class="small">
+              {% for c in r.courses.all %}
+                <span class="badge bg-secondary">{{ c.title }}</span>
+              {% empty %}
+                <span class="text-muted">—</span>
+              {% endfor %}
+            </td>
+            <td><span class="badge bg-light text-dark">{{ r.get_status_display }}</span></td>
+            <td>{{ r.chunk_count }}</td>
+            <td class="text-nowrap">
+              <a class="btn btn-sm btn-outline-primary" href="{% url 'resources:detail' r.pk %}">View</a>
+              <a class="btn btn-sm btn-outline-secondary" href="{% url 'resources:edit' r.pk %}">Edit</a>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="10" class="text-muted p-3">No resources yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  const form = document.getElementById('resourceUploadForm');
+  if (!form || !window.fetch) return;
+
+  form.addEventListener('submit', async function (e) {
+    const fileInput = form.querySelector('input[type="file"]');
+    if (!fileInput || !fileInput.files || !fileInput.files.length) return; // let browser validate
+    e.preventDefault();
+
+    const wrap = document.getElementById('ingestProgressWrap');
+    const bar = document.getElementById('ingestProgressBar');
+    const status = document.getElementById('ingestStatusText');
+    const btn = document.getElementById('uploadSubmitBtn');
+    wrap.classList.remove('d-none');
+    status.classList.remove('d-none');
+    btn.disabled = true;
+
+    const fd = new FormData(form);
+    try {
+      const resp = await fetch(form.action, {
+        method: 'POST',
+        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        body: fd,
+        credentials: 'same-origin'
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        status.textContent = data.error || data.detail || (data.errors && JSON.stringify(data.errors)) || 'Upload failed';
+        btn.disabled = false;
+        return;
+      }
+      const jobId = data.job_id;
+      status.textContent = 'Ingestion running…';
+      const poll = async () => {
+        const pr = await fetch(`/admin-panel/resources/jobs/${jobId}/progress/`, { credentials: 'same-origin' });
+        const pj = await pr.json();
+        const pct = pj.progress_percent ?? 0;
+        bar.style.width = pct + '%';
+        bar.textContent = pct + '%';
+        status.textContent = pj.message || pj.status;
+        if (pj.status === 'completed' || pj.status === 'failed') {
+          window.location.href = data.redirect_url || `/admin-panel/resources/${data.resource_id}/`;
+          return;
+        }
+        setTimeout(poll, 600);
+      };
+      poll();
+    } catch (err) {
+      status.textContent = 'Network error — submit without JS or retry.';
+      btn.disabled = false;
+    }
+  });
+})();
+</script>
+{% endblock %}

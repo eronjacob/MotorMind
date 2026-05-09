@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block title %}Edit {{ course.title }} — Car-Hoot{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{% url 'accounts:admin_panel' %}">Admin panel</a></li>
+    <li class="breadcrumb-item active">{{ course.title }}</li>
+  </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+  <div>
+    <h1 class="h3 mb-1">Edit course</h1>
+    <p class="text-muted mb-0 small">Manage videos, sections, quizzes, and AR tasks for this course.</p>
+  </div>
+  <div class="btn-group">
+    <a class="btn btn-outline-secondary btn-sm" href="{% url 'accounts:admin_panel' %}">Back to admin panel</a>
+    <a class="btn btn-outline-primary btn-sm" href="{% url 'courses:course_detail' course.pk %}">View public course page</a>
+  </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+  <div class="card-header fw-semibold">Course details</div>
+  <div class="card-body">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% for field in form %}
+        <div class="mb-3">
+          <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% for err in field.errors %}<div class="text-danger small">{{ err }}</div>{% endfor %}
+        </div>
+      {% endfor %}
+      <button type="submit" class="btn btn-primary">Save course</button>
+    </form>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="card shadow-sm h-100">
+      <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <span class="fw-semibold">Training videos &amp; sections</span>
+        <a class="btn btn-sm btn-primary" href="{% url 'accounts:manage_course_video_add' course.pk %}">Add video</a>
+      </div>
+      <div class="card-body">
+        {% if videos %}
+          <ul class="list-group list-group-flush small">
+            {% for v in videos %}
+              <li class="list-group-item">
+                <div class="fw-semibold">{{ v.title }}</div>
+                <div class="text-muted">{{ v.video_url|truncatechars:56 }}</div>
+                {% if v.sections.all %}
+                  <ul class="mb-0 mt-1">
+                    {% for s in v.sections.all %}
+                      <li>{{ s.title }} ({{ s.start_seconds }}s–{{ s.end_seconds }}s)</li>
+                    {% endfor %}
+                  </ul>
+                {% else %}
+                  <p class="text-muted mb-0 mt-1">No sections yet.</p>
+                {% endif %}
+                <a class="btn btn-sm btn-outline-primary mt-2" href="{% url 'accounts:manage_course_section_add' course.pk %}?video={{ v.pk }}">Add section</a>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="text-muted small mb-0">No videos yet. Add a video, then add timestamped sections.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="card shadow-sm h-100 mb-3">
+      <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <span class="fw-semibold">Quizzes</span>
+        <a class="btn btn-sm btn-primary" href="{% url 'accounts:manage_course_quiz_add' course.pk %}">Add quiz</a>
+      </div>
+      <div class="card-body">
+        {% if quizzes %}
+          <ul class="list-group list-group-flush small">
+            {% for q in quizzes %}
+              <li class="list-group-item">
+                <div class="fw-semibold">{{ q.title }}</div>
+                <p class="text-muted mb-1">Pass mark: {{ q.pass_mark }}%</p>
+                {% if q.questions.all %}
+                  <p class="mb-1">Questions:</p>
+                  <ul class="mb-2">
+                    {% for qu in q.questions.all %}
+                      <li class="text-break">{{ qu.question_text|truncatechars:80 }}</li>
+                    {% endfor %}
+                  </ul>
+                {% else %}
+                  <p class="text-muted small">No questions yet.</p>
+                {% endif %}
+                <div class="d-flex flex-wrap gap-1">
+                  <a class="btn btn-sm btn-outline-primary" href="{% url 'accounts:manage_course_question_add' course.pk %}?quiz={{ q.pk }}">Add question</a>
+                  <a class="btn btn-sm btn-outline-secondary" href="{% url 'accounts:manage_course_choice_add' course.pk %}">Add answer choice</a>
+                </div>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="text-muted small mb-0">No quizzes yet.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card shadow-sm h-100">
+      <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <span class="fw-semibold">AR tasks</span>
+        <a class="btn btn-sm btn-primary" href="{% url 'accounts:manage_course_ar_add' course.pk %}">Add AR task</a>
+      </div>
+      <div class="card-body">
+        {% if ar_tasks %}
+          <ul class="list-group list-group-flush small">
+            {% for t in ar_tasks %}
+              <li class="list-group-item">
+                <div class="fw-semibold">{{ t.title }}</div>
+                <p class="text-muted mb-2">{{ t.get_target_object_display }} · {{ t.get_difficulty_display }}</p>
+                <a class="btn btn-sm btn-outline-primary" href="{% url 'accounts:manage_course_ar_step_add' course.pk %}?task={{ t.pk }}">Add step</a>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="text-muted small mb-0">No AR tasks yet.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<p class="small text-muted mt-3 mb-0">
+  For bulk edits, filters, and inlines you can still use the
+  <a href="/admin/">Django admin</a> (courses, videos, quizzes, AR tasks).
+</p>
+{% endblock %}

@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}{{ task.title }} — AR task{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{% url 'courses:course_list' %}">Courses</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'courses:course_detail' task.course_id %}">{{ task.course.title }}</a></li>
+    <li class="breadcrumb-item active">{{ task.title }}</li>
+  </ol>
+</nav>
+
+<h1 class="h3 mb-2">{{ task.title }}</h1>
+<p class="text-muted mb-1">
+  Target: {{ task.get_target_object_display }} · {{ task.get_difficulty_display }}
+</p>
+<p>{{ task.description }}</p>
+
+<div class="card shadow-sm mb-3">
+  <div class="card-header fw-semibold">Scenario</div>
+  <div class="card-body">{{ task.scenario_text|linebreaks }}</div>
+</div>
+
+{% if task.linked_video_section %}
+  <div class="alert alert-info small">
+    Linked video section:
+    <strong>{{ task.linked_video_section.title }}</strong>
+    —
+    <a href="{% url 'courses:video_detail' task.course_id task.linked_video_section.video_id %}?t={{ task.linked_video_section.start_seconds }}">
+      Jump to video ({{ task.linked_video_section.start_seconds }}s)
+    </a>
+  </div>
+{% endif %}
+
+<div class="card shadow-sm mb-4">
+  <div class="card-header fw-semibold">Steps</div>
+  <ol class="list-group list-group-numbered list-group-flush">
+    {% for s in task.steps.all %}
+      <li class="list-group-item">
+        <div class="fw-semibold">{{ s.instruction }}</div>
+        {% if s.expected_reading %}
+          <div class="small text-muted">Expected reading: {{ s.expected_reading }}</div>
+        {% endif %}
+        {% if s.explanation %}
+          <div class="small mt-1">{{ s.explanation }}</div>
+        {% endif %}
+        {% if s.video_timestamp_seconds and task.linked_video_section %}
+          <div class="small mt-1">
+            <a href="{% url 'courses:video_detail' task.course_id task.linked_video_section.video_id %}?t={{ s.video_timestamp_seconds }}">
+              Related video time: {{ s.video_timestamp_seconds }}s
+            </a>
+          </div>
+        {% elif s.video_timestamp_seconds %}
+          <div class="small text-muted mt-1">Video jump: {{ s.video_timestamp_seconds }}s (link a video section on the task to enable)</div>
+        {% endif %}
+      </li>
+    {% empty %}
+      <li class="list-group-item text-muted">No steps yet.</li>
+    {% endfor %}
+  </ol>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-header fw-semibold">Your progress</div>
+  <div class="card-body">
+    <p>Status: <strong>{{ progress.get_status_display }}</strong></p>
+    <form method="post" action="{% url 'ar_tasks:task_progress' task.course_id task.pk %}" class="row g-2 align-items-end">
+      {% csrf_token %}
+      <div class="col-md-4">
+        <label class="form-label small" for="statusSelect">Update status</label>
+        <select class="form-select" name="status" id="statusSelect">
+          {% for val, label in progress.Status.choices %}
+            <option value="{{ val }}" {% if progress.status == val %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-5">
+        <label class="form-label small" for="notesField">Notes</label>
+        <input class="form-control" name="notes" id="notesField" value="{{ progress.notes }}">
+      </div>
+      <div class="col-md-3">
+        <button type="submit" class="btn btn-success w-100">Save progress</button>
+      </div>
+    </form>
+    <p class="small text-muted mt-2 mb-0">
+      Tip: mark <strong>Completed</strong> when you finish the simulated diagnostic flow.
+    </p>
+  </div>
+</div>
+{% endblock %}

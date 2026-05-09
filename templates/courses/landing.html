@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Car-Hoot — Automotive electronics learning{% endblock %}
+{% block content %}
+<div class="p-5 mb-4 bg-white rounded shadow-sm">
+  <h1 class="display-5">Car-Hoot</h1>
+  <p class="lead">
+    An automotive electronics education platform: training videos, structured sections,
+    quizzes, and practical AR-style diagnostic tasks—built for classrooms and hackathon demos.
+  </p>
+  <p class="text-muted">
+    Teachers publish content; students learn, get assessed, and practice fault-finding on
+    <strong>virtual</strong> scenarios (healthy car, simulated readings).
+  </p>
+  <div class="d-flex gap-2 flex-wrap">
+    <a class="btn btn-primary" href="{% url 'accounts:login' %}">Log in</a>
+    {% if user.is_authenticated %}
+      <a class="btn btn-outline-primary" href="{% url 'accounts:dashboard' %}">Dashboard</a>
+      <a class="btn btn-outline-secondary" href="{% url 'courses:course_list' %}">Browse courses</a>
+    {% else %}
+      <a class="btn btn-outline-secondary" href="{% url 'accounts:login' %}">Dashboard (requires login)</a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
