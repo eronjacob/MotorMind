@@ -65,7 +65,7 @@
         >
           <iframe
             id="course-video-iframe"
-            src="{{ featured_video.youtube_embed_url }}?rel=0"
+            src="{{ featured_video.youtube_embed_url }}?rel=0&amp;enablejsapi=1"
             title="{{ featured_video.title }}"
             allowfullscreen
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
@@ -222,15 +222,56 @@
   var wrap = document.getElementById('course-video-embed-wrap');
   var iframe = document.getElementById('course-video-iframe');
   var base = wrap && wrap.getAttribute('data-embed-base');
-  if (iframe && base) {
-    document.querySelectorAll('.course-video-jump').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        var t = parseInt(btn.getAttribute('data-start'), 10);
-        if (isNaN(t) || t < 0) t = 0;
-        var sep = base.indexOf('?') >= 0 ? '&' : '?';
-        iframe.src = base + sep + 'start=' + t + '&rel=0';
-      });
+  if (!iframe || !base) return;
+
+  var ytPlayer = null;
+  var ytBootstrapped = false;
+
+  function jumpByReloadingIframe(seconds) {
+    var sep = base.indexOf('?') >= 0 ? '&' : '?';
+    iframe.src = base + sep + 'start=' + seconds + '&rel=0&enablejsapi=1';
+  }
+
+  document.querySelectorAll('.course-video-jump').forEach(function (btn) {
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      var t = parseInt(btn.getAttribute('data-start'), 10);
+      if (isNaN(t) || t < 0) t = 0;
+      if (ytPlayer && typeof ytPlayer.seekTo === 'function') {
+        ytPlayer.seekTo(t, true);
+        ytPlayer.playVideo();
+      } else {
+        jumpByReloadingIframe(t);
+      }
     });
+  });
+
+  function initCourseYouTubePlayer() {
+    if (ytBootstrapped || !window.YT || !YT.Player) return;
+    ytBootstrapped = true;
+    new YT.Player('course-video-iframe', {
+      events: {
+        onReady: function (ev) {
+          ytPlayer = ev.target;
+        }
+      }
+    });
+  }
+
+  if (window.YT && window.YT.Player) {
+    initCourseYouTubePlayer();
+  } else {
+    var prev = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = function () {
+      if (typeof prev === 'function') prev();
+      initCourseYouTubePlayer();
+    };
+    if (!document.querySelector('script[src="https://www.youtube.com/iframe_api"]')) {
+      var tag = document.createElement('script');
+      tag.src = 'https://www.youtube.com/iframe_api';
+      var firstScriptTag = document.getElementsByTagName('script')[0];
+      firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+    }
   }
 })();
 </script>
