@@ -1,7 +1,7 @@
 {% extends "base.html" %}
-{% block title %}Dashboard — Car-Hoot{% endblock %}
+{% block title %}Dashboard — MotorMind{% endblock %}
 {% block content %}
-<h1 class="h3 mb-3">Dashboard</h1>
+<h1 class="mb-4 pt-4">Dashboard</h1>
 
 {% if profile and profile.role == 'teacher' %}
   <p class="text-muted">Teacher tools and recent student activity.</p>
@@ -9,11 +9,11 @@
     <div class="col-md-6">
       <div class="card shadow-sm h-100">
         <div class="card-body">
-          <h2 class="h6">Manage content</h2>
+          <h2 class="h6">Manage Content</h2>
           <ul class="mb-0">
-            <li><a href="{% url 'accounts:admin_panel' %}">Custom admin panel</a></li>
-            <li><a href="/admin/">Django admin</a> (full CRUD)</li>
-            <li><a href="{% url 'courses:course_list' %}">View courses (student preview)</a></li>
+            <li><a class="link-dealer" href="{% url 'accounts:admin_panel' %}">Custom admin panel</a></li>
+            <li><a class="link-dealer" href="/admin/">Django admin</a> (full CRUD)</li>
+            <li><a class="link-dealer" href="{% url 'courses:course_list' %}">View courses (student preview)</a></li>
           </ul>
         </div>
       </div>
@@ -24,7 +24,7 @@
           <h2 class="h6">Your recent courses</h2>
           <ul class="mb-0 small">
             {% for c in courses_managed %}
-              <li><a href="{% url 'courses:course_detail' c.pk %}">{{ c.title }}</a></li>
+              <li><a class="link-dealer" href="{% url 'courses:course_detail' c.pk %}">{{ c.title }}</a></li>
             {% empty %}
               <li class="text-muted">No courses created yet.</li>
             {% endfor %}

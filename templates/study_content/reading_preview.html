@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Reading preview — {{ course.title }}{% endblock %}
+{% block title %}Reading Preview — {{ course.title }}{% endblock %}
 {% block extra_head %}
 <style>
 .reading-page-title {
@@ -25,12 +25,12 @@
 <nav aria-label="breadcrumb">
   <ol class="breadcrumb">
     <li class="breadcrumb-item"><a href="{{ back_url }}">{{ course.title }}</a></li>
-    <li class="breadcrumb-item active">Reading preview</li>
+    <li class="breadcrumb-item active">Reading Preview</li>
   </ol>
 </nav>
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h1 class="reading-page-title mb-0">{{ page.title|default:"Reading" }}</h1>
-  <a class="btn btn-sm btn-outline-secondary" href="{% url 'study_content:reading_edit' course.pk %}">Back to editor</a>
+  <a class="btn btn-sm btn-outline-secondary" href="{% url 'study_content:reading_edit' course.pk %}">Back to Editor</a>
 </div>
 <div class="card shadow-sm">
   <div class="card-body reading-body-host">

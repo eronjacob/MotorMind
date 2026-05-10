@@ -1,7 +1,7 @@
 {% extends "base.html" %}
-{% block title %}Edit resource — {{ object.title }}{% endblock %}
+{% block title %}Edit Resource — {{ object.title }}{% endblock %}
 {% block content %}
-<h1 class="h4 mb-3">Edit resource</h1>
+<h1 class="h4 mb-3">Edit Resource</h1>
 <form method="post" novalidate>
   {% csrf_token %}
   {% for field in form %}

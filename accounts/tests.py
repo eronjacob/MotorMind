@@ -49,3 +49,34 @@ class CourseResourceAttachDetachTests(TestCase):
         self.assertEqual(resp2.status_code, 302)
         self.assertNotIn(self.resource, self.course.resources.all())
         self.assertTrue(Resource.objects.filter(pk=self.resource.pk).exists())
+
+
+class CourseDeleteTests(TestCase):
+    def setUp(self):
+        User = get_user_model()
+        self.user = User.objects.create_user(username="delteacher", password="pw")
+        self.user.profile.role = Profile.Role.TEACHER
+        self.user.profile.save(update_fields=["role"])
+        self.course = Course.objects.create(
+            title="To delete",
+            description="",
+            created_by=self.user,
+        )
+        self.resource = Resource.objects.create(
+            title="Shared doc",
+            resource_type=Resource.ResourceType.PDF,
+            uploaded_file=SimpleUploadedFile("x.pdf", b"%PDF-1.4"),
+            status=Resource.Status.UPLOADED,
+        )
+        self.resource.courses.add(self.course)
+        self.client = Client()
+        self.client.login(username="delteacher", password="pw")
+
+    def test_delete_course_removes_course_keeps_resource(self):
+        url = reverse("accounts:manage_course_delete", kwargs={"course_id": self.course.pk})
+        r = self.client.post(url, follow=False)
+        self.assertEqual(r.status_code, 302)
+        self.assertEqual(r["Location"], reverse("accounts:admin_panel"))
+        self.assertFalse(Course.objects.filter(pk=self.course.pk).exists())
+        self.resource.refresh_from_db()
+        self.assertEqual(self.resource.courses.count(), 0)

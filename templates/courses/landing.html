@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}Car-Hoot — Automotive Electronics Education{% endblock %}
+{% block title %}MotorMind — Automotive Electronics Education{% endblock %}
 {% block content %}
 
 <!-- Hero – premium dealership-style landing -->
@@ -11,13 +11,13 @@
           <span class="text-primary-orange">Master</span> Automotive Electronics
         </h1>
         <p class="lead mb-4">
-          Car-Hoot brings you <strong>structured video courses</strong>,
+          MotorMind brings you <strong>structured video courses</strong>,
           <strong>interactive quizzes</strong>, and <strong>AR diagnostic tasks</strong>
           — all designed for classrooms and hands-on practice.
         </p>
         <div class="d-flex gap-3 flex-wrap">
           <a class="btn btn-primary-orange btn-lg" href="{% url 'accounts:login' %}">
-            <i class="fas fa-sign-in-alt me-2"></i>Start learning
+            <i class="fas fa-sign-in-alt me-2"></i>Start Learning
           </a>
           {% if user.is_authenticated %}
             <a class="btn btn-outline-primary-orange btn-lg" href="{% url 'accounts:dashboard' %}">
@@ -25,13 +25,13 @@
             </a>
           {% endif %}
           <a class="btn btn-outline-primary-orange btn-lg" href="{% url 'courses:course_list' %}">
-            <i class="fas fa-book-open me-2"></i>Browse courses
+            <i class="fas fa-book-open me-2"></i>Browse Courses
           </a>
         </div>
     </div>
     <div class="col-lg-5 d-none d-lg-block text-center align-self-end landing-hero-car-col">
         <img src="{% static 'images/hero-sport-car.png' %}"
-             alt="Sport coupe illustration for Car-Hoot automotive training"
+             alt="Sport coupe illustration for MotorMind automotive training"
              class="img-fluid rounded-4 landing-hero-car">
     </div>
   </div>

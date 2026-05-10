@@ -1,27 +1,28 @@
 {% extends "base.html" %}
 {% load resource_extras %}
-{% block title %}Edit {{ course.title }} — Car-Hoot{% endblock %}
+{% block title %}Edit {{ course.title }} — MotorMind{% endblock %}
 {% block content %}
 <nav aria-label="breadcrumb">
   <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="{% url 'accounts:admin_panel' %}">Admin panel</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'accounts:admin_panel' %}">Admin Panel</a></li>
     <li class="breadcrumb-item active">{{ course.title }}</li>
   </ol>
 </nav>
 
-<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+<div class="course-edit-panel">
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
   <div>
-    <h1 class="h3 mb-1">Edit course</h1>
+    <h1 class="mb-4">Edit Course</h1>
     <p class="text-muted mb-0 small">Manage videos, sections, quizzes, and AR tasks for this course.</p>
   </div>
-  <div class="btn-group">
+  <div class="d-flex flex-wrap gap-2 flex-shrink-0 align-items-start">
     <a class="btn btn-outline-secondary btn-sm" href="{% url 'accounts:admin_panel' %}">Back to admin panel</a>
     <a class="btn btn-outline-primary btn-sm" href="{% url 'courses:course_detail' course.pk %}">View public course page</a>
   </div>
 </div>
 
 <div class="card shadow-sm mb-4">
-  <div class="card-header fw-semibold">Course details</div>
+  <div class="card-header fw-semibold">Course Details</div>
   <div class="card-body">
     <form method="post" novalidate>
       {% csrf_token %}
@@ -37,7 +38,7 @@
                   title="Uses training video transcripts and the latest top-5 reading chunks when available."
                 {% else %}
                   title="Add transcripts to your videos and/or run Find top 5 chunks in the Reading section below."
-                {% endif %}>Generate description</button>
+                {% endif %}>Generate Description</button>
               <span class="small text-muted" id="course-description-ai-status" aria-live="polite"></span>
             </div>
           {% endif %}
@@ -45,7 +46,7 @@
           {% for err in field.errors %}<div class="text-danger small">{{ err }}</div>{% endfor %}
         </div>
       {% endfor %}
-      <button type="submit" class="btn btn-primary">Save course</button>
+      <button type="submit" class="btn btn-primary">Save Course</button>
     </form>
   </div>
 </div>
@@ -54,8 +55,8 @@
   <div class="col-lg-6">
     <div class="card shadow-sm h-100">
       <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-        <span class="fw-semibold">Training videos &amp; sections</span>
-        <a class="btn btn-sm btn-primary" href="{% url 'accounts:manage_course_video_add' course.pk %}">Add video</a>
+        <span class="fw-semibold">Training Videos &amp; Sections</span>
+        <a class="btn btn-sm btn-primary" href="{% url 'accounts:manage_course_video_add' course.pk %}">Add Video</a>
       </div>
       <div class="card-body">
         {% if videos %}
@@ -79,10 +80,10 @@
                     {% endif %}
                     {% endwith %}
                     <div class="d-flex flex-wrap gap-1 mt-2">
-                      <a class="btn btn-sm btn-outline-secondary" href="{% url 'accounts:course_video_edit' course.pk v.pk %}">Edit video</a>
+                      <a class="btn btn-sm btn-outline-secondary" href="{% url 'accounts:course_video_edit' course.pk v.pk %}">Edit Video</a>
                       <form method="post" action="{% url 'accounts:course_video_delete' course.pk v.pk %}" class="d-inline" onsubmit="return confirm('Delete this video and all its sections?');">
                         {% csrf_token %}
-                        <button type="submit" class="btn btn-sm btn-outline-danger">Remove video</button>
+                        <button type="submit" class="btn btn-sm btn-outline-danger">Remove Video</button>
                       </form>
                     </div>
                   </div>
@@ -101,7 +102,7 @@
     <div class="card shadow-sm h-100 mb-3">
       <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
         <span class="fw-semibold">Quizzes</span>
-        <a class="btn btn-sm btn-primary" href="{% url 'accounts:manage_course_quiz_add' course.pk %}">Add quiz</a>
+        <a class="btn btn-sm btn-primary" href="{% url 'accounts:manage_course_quiz_add' course.pk %}">Add Quiz</a>
       </div>
       <div class="card-body">
         {% if quizzes %}
@@ -109,14 +110,14 @@
             {% for q in quizzes %}
               <li class="list-group-item">
                 <div class="fw-semibold">{{ q.title }}</div>
-                <p class="text-muted mb-1">Pass mark: {{ q.pass_mark }}%</p>
+                <p class="text-muted mb-1">Pass Mark: {{ q.pass_mark }}%</p>
                 <p class="text-muted small mb-2">Questions: {{ q.num_questions }}</p>
                 <div class="d-flex flex-wrap gap-1 align-items-center">
-                  <a class="btn btn-sm btn-primary" href="{% url 'accounts:course_quiz_edit' course.pk q.pk %}">Edit quiz</a>
+                  <a class="btn btn-sm btn-primary" href="{% url 'accounts:course_quiz_edit' course.pk q.pk %}">Edit Quiz</a>
                   <a class="btn btn-sm btn-outline-primary" href="{% url 'quizzes:quiz_take' q.pk %}" target="_blank" rel="noopener">Preview</a>
                   <form method="post" action="{% url 'accounts:course_quiz_delete' course.pk q.pk %}" class="d-inline" onsubmit="return confirm('Delete this quiz and all attempts?');">
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-outline-danger">Remove quiz</button>
+                    <button type="submit" class="btn btn-sm btn-outline-danger">Remove Quiz</button>
                   </form>
                 </div>
               </li>
@@ -130,8 +131,8 @@
 
     <div class="card shadow-sm h-100">
       <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-        <span class="fw-semibold">AR tasks</span>
-        <a class="btn btn-sm btn-primary" href="{% url 'accounts:manage_course_ar_add' course.pk %}">Add AR task</a>
+        <span class="fw-semibold">AR Tasks</span>
+        <a class="btn btn-sm btn-primary" href="{% url 'accounts:manage_course_ar_add' course.pk %}">Add AR Task</a>
       </div>
       <div class="card-body">
         {% if ar_tasks %}
@@ -140,7 +141,7 @@
               <li class="list-group-item">
                 <div class="fw-semibold">{{ t.title }}</div>
                 <p class="text-muted mb-2">{{ t.get_target_object_display }} · {{ t.get_difficulty_display }}</p>
-                <a class="btn btn-sm btn-outline-primary" href="{% url 'accounts:manage_course_ar_step_add' course.pk %}?task={{ t.pk }}">Add step</a>
+                <a class="btn btn-sm btn-outline-primary" href="{% url 'accounts:manage_course_ar_step_add' course.pk %}?task={{ t.pk }}">Add Step</a>
               </li>
             {% endfor %}
           </ul>
@@ -154,7 +155,7 @@
 
 {% if resources_module_available %}
 <div class="card shadow-sm mb-4">
-  <div class="card-header fw-semibold">Linked resources / books</div>
+  <div class="card-header fw-semibold">Linked Resources / Books</div>
   <div class="card-body">
     <p class="small text-muted">
       Attach PDFs and books already in the resource library. Detaching removes the course link only — files and vectors stay unless you delete the resource from the library.
@@ -211,7 +212,7 @@
         </select>
       </div>
       <div class="col-md-4">
-        <button type="submit" class="btn btn-sm btn-primary w-100" {% if not available_resources %}disabled{% endif %}>Attach resource</button>
+        <button type="submit" class="btn btn-sm btn-primary w-100" {% if not available_resources %}disabled{% endif %}>Attach Resource</button>
       </div>
     </form>
     {% if not available_resources %}
@@ -322,7 +323,7 @@
         <p class="small text-muted mb-2">No saved chunks yet — run “Find top 5 chunks” after linking resources and adding transcripts.</p>
       {% endif %}
       <div class="mt-2">
-        <button type="submit" class="btn btn-sm btn-outline-primary">Find top 5 chunks</button>
+        <button type="submit" class="btn btn-sm btn-outline-primary">Find Top 5 Chunks</button>
       </div>
     </form>
 
@@ -346,20 +347,20 @@
     </div>
     <form method="post" action="{% url 'study_content:reading_generate' course.pk %}" class="d-inline ms-1">
       {% csrf_token %}
-      <button type="submit" class="btn btn-sm btn-primary">Generate reading</button>
+      <button type="submit" class="btn btn-sm btn-primary">Generate Reading</button>
     </form>
     {% if reading_can_remove %}
     <form method="post" action="{% url 'study_content:reading_regenerate' course.pk %}" class="d-inline ms-1" onsubmit="return confirm('Regenerate the reading from the latest chunks? Current HTML will be replaced.');">
       {% csrf_token %}
-      <button type="submit" class="btn btn-sm btn-outline-primary">Regenerate reading</button>
+      <button type="submit" class="btn btn-sm btn-outline-primary">Regenerate Reading</button>
     </form>
     {% endif %}
-    <a class="btn btn-sm btn-outline-secondary ms-1" href="{% url 'study_content:reading_edit' course.pk %}">Edit reading</a>
-    <a class="btn btn-sm btn-outline-info ms-1" href="{% url 'study_content:reading_preview' course.pk %}" target="_blank" rel="noopener">Preview reading</a>
+    <a class="btn btn-sm btn-outline-secondary ms-1" href="{% url 'study_content:reading_edit' course.pk %}">Edit Reading</a>
+    <a class="btn btn-sm btn-outline-info ms-1" href="{% url 'study_content:reading_preview' course.pk %}" target="_blank" rel="noopener">Preview Reading</a>
     {% if reading_can_remove %}
     <form method="post" action="{% url 'study_content:reading_delete' course.pk %}" class="d-inline ms-1" onsubmit="return confirm('Remove the reading from this course? Students will no longer see it on the course page. This cannot be undone.');">
       {% csrf_token %}
-      <button type="submit" class="btn btn-sm btn-outline-danger">Remove reading</button>
+      <button type="submit" class="btn btn-sm btn-outline-danger">Remove Reading</button>
     </form>
     {% endif %}
   </div>
@@ -370,6 +371,26 @@
   For bulk edits, filters, and inlines you can still use the
   <a href="/admin/">Django admin</a> (courses, videos, quizzes, AR tasks).
 </p>
+
+<hr class="my-4">
+<div class="card shadow-sm border-danger">
+  <div class="card-body">
+    <h2 class="h6 text-danger mb-2">Delete course</h2>
+    <p class="small text-muted mb-3">
+      Permanently remove this course and all related <strong>database</strong> records
+      (videos, sections, quizzes, quiz attempts, tutor conversations, reading pages/contexts,
+      AR tasks and student progress). Course links on shared library resources are removed;
+      the resources themselves and their <strong>vector index</strong> entries are <strong>not</strong> deleted or changed.
+    </p>
+    <form method="post"
+          action="{% url 'accounts:manage_course_delete' course.pk %}"
+          onsubmit="return confirm('Delete this course and all related data from the database? This cannot be undone.');">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-outline-danger">Delete course permanently</button>
+    </form>
+  </div>
+</div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -409,7 +430,7 @@
       .then(function (res) {
         if (res.j && res.j.success && res.j.description) {
           descTa.value = res.j.description;
-          if (statusEl) statusEl.textContent = 'Description inserted — review and click Save course.';
+          if (statusEl) statusEl.textContent = 'Description inserted — review and click Save Course.';
         } else {
           if (statusEl) statusEl.textContent = (res.j && res.j.error) ? res.j.error : 'Generation failed.';
         }

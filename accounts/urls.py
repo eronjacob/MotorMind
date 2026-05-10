@@ -76,6 +76,11 @@ urlpatterns = [
         name="manage_course_add",
     ),
     path(
+        "admin-panel/manage/course/<int:course_id>/delete/",
+        manage_views.course_delete,
+        name="manage_course_delete",
+    ),
+    path(
         "admin-panel/manage/course/<int:course_pk>/videos/add/",
         manage_views.NestedTrainingVideoCreateView.as_view(),
         name="manage_course_video_add",

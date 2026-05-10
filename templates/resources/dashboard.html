@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 {% load resource_extras %}
-{% block title %}Resource library — Car-Hoot{% endblock %}
+{% block title %}Resource Library — MotorMind{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
-  <h1 class="h3 mb-0">Resource library / vector search</h1>
+  <h1 class="mb-0">Resource Library / Vector Search</h1>
   <a class="btn btn-outline-secondary btn-sm" href="{% url 'accounts:admin_panel' %}">Back to admin panel</a>
 </div>
 <p class="text-muted">
@@ -12,7 +12,7 @@
 </p>
 
 <div class="card shadow-sm mb-4" id="uploadCard">
-  <div class="card-header fw-semibold">Upload resource</div>
+  <div class="card-header fw-semibold">Upload Resource</div>
   <div class="card-body">
     <div class="progress mb-3 d-none" id="ingestProgressWrap" style="height: 28px;">
       <div class="progress-bar progress-bar-striped progress-bar-animated" id="ingestProgressBar" role="progressbar" style="width: 0%">0%</div>
@@ -21,8 +21,8 @@
 
     <div class="alert alert-info small">
       <strong>Book PDFs:</strong> rename the file to its <strong>ISBN</strong> before uploading, for example
-      <code>9780415725774.pdf</code> or <code>978-0-415-72577-4.pdf</code>. Car-Hoot validates the checksum and fetches metadata automatically.
-      <span class="d-block mt-1 text-muted">Plain text / Markdown / DOCX uploads use the filename as a working title; ISBN is only required when the resource type is <em>book</em> (PDFs default to book).</span>
+      <code>9780415725774.pdf</code> or <code>978-0-415-72577-4.pdf</code>. MotorMind validates the checksum and fetches metadata automatically.
+      <span class="d-block mt-1 text-muted">Plain Text / Markdown / DOCX uploads use the filename as a working title; ISBN is only required when the resource type is <em>book</em> (PDFs default to book).</span>
     </div>
 
     <form id="resourceUploadForm" method="post" action="{% url 'resources:upload' %}" enctype="multipart/form-data" novalidate>
@@ -36,7 +36,7 @@
         </div>
       {% endfor %}
       <button type="submit" class="btn btn-primary" id="uploadSubmitBtn">Upload &amp; ingest</button>
-      <a class="btn btn-outline-secondary" href="{% url 'resources:test_retrieval' %}">Test retrieval</a>
+      <a class="btn btn-outline-secondary" href="{% url 'resources:test_retrieval' %}">Test Retrieval</a>
     </form>
     <p class="small text-muted mt-2 mb-0">
       Non-JS fallback: submit runs synchronously (may take a bit). With JavaScript enabled, a progress bar polls the job endpoint.

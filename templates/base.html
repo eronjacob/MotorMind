@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}Car-Hoot{% endblock %}</title>
+  <title>{% block title %}MotorMind{% endblock %}</title>
   
   <!-- Bootstrap 5 + Icons + Fonts -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
@@ -99,6 +99,24 @@
       color: var(--primary-orange) !important;
     }
 
+    .navbar .navbar-text {
+      margin-bottom: 0;
+      padding-top: 0;
+      padding-bottom: 0;
+      line-height: 1.5;
+    }
+
+    /* In-content links: theme colors, no default browser blue */
+    .link-dealer {
+      color: var(--text-dark);
+      text-decoration: none;
+    }
+
+    .link-dealer:hover {
+      color: var(--primary-orange);
+      text-decoration: underline;
+    }
+
     /* Buttons - orange (.btn-gold aliases login template) */
     .btn-primary-orange,
     .btn-gold {
@@ -172,6 +190,29 @@
       background: var(--primary-orange);
       border-color: var(--primary-orange);
       color: var(--white);
+    }
+
+    /* Course / quiz / reading teacher editors: pill geometry aligned with primary buttons */
+    .course-edit-panel .btn:not(.btn-link):not(.btn-close) {
+      border-radius: var(--bs-border-radius-pill);
+    }
+
+    .course-edit-panel .btn-group > .btn:not(.btn-link):not(.btn-close) {
+      border-radius: 0;
+    }
+
+    .course-edit-panel .btn-group > .btn:first-child:not(.dropdown-toggle) {
+      border-top-left-radius: var(--bs-border-radius-pill);
+      border-bottom-left-radius: var(--bs-border-radius-pill);
+    }
+
+    .course-edit-panel .btn-group > .btn:last-child:not(.dropdown-toggle) {
+      border-top-right-radius: var(--bs-border-radius-pill);
+      border-bottom-right-radius: var(--bs-border-radius-pill);
+    }
+
+    .course-edit-panel .btn-group > .btn:only-child {
+      border-radius: var(--bs-border-radius-pill);
     }
 
     /* Cards */
@@ -378,6 +419,19 @@
       box-shadow: var(--shadow-hover);
     }
 
+    /* Course outline: timestamp jumps stay orange, no underline on hover */
+    .course-outline-body button.course-video-jump:hover,
+    .course-outline-body button.course-video-jump:focus,
+    .course-outline-body button.course-video-jump:focus-visible {
+      text-decoration: none;
+      color: var(--primary-orange-dark) !important;
+    }
+
+    .course-outline-body a.text-primary-orange:hover {
+      text-decoration: none;
+      color: var(--primary-orange-dark) !important;
+    }
+
   </style>
 </head>
 <body>
@@ -386,24 +440,24 @@
 <nav class="navbar navbar-expand-lg navbar-light sticky-top">
   <div class="container">
     <a class="navbar-brand" href="{% url 'courses:landing' %}">
-      <i class="fas fa-car-side"></i> Car-Hoot
+      <i class="fas fa-car-side"></i> MotorMind
     </a>
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMain">
       <span class="navbar-toggler-icon"></span>
     </button>
-    <div class="collapse navbar-collapse" id="navMain">
-      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+    <div class="collapse navbar-collapse align-items-lg-center" id="navMain">
+      <ul class="navbar-nav me-auto mb-2 mb-lg-0 align-items-lg-center">
         {% if user.is_authenticated %}
-          <li class="nav-item"><a class="nav-link" href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
-          <li class="nav-item"><a class="nav-link" href="{% url 'courses:course_list' %}">Courses</a></li>
+          <li class="nav-item"><a class="nav-link fw-bold" href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+          <li class="nav-item"><a class="nav-link fw-bold" href="{% url 'courses:course_list' %}">Courses</a></li>
           {% if user.is_staff or user_profile and user_profile.role == 'teacher' %}
-            <li class="nav-item"><a class="nav-link" href="{% url 'accounts:admin_panel' %}">Admin panel</a></li>
+            <li class="nav-item"><a class="nav-link fw-bold" href="{% url 'accounts:admin_panel' %}">Admin panel</a></li>
           {% endif %}
         {% endif %}
       </ul>
-      <ul class="navbar-nav ms-auto">
+      <ul class="navbar-nav ms-auto align-items-lg-center">
         {% if user.is_authenticated %}
-          <li class="nav-item"><span class="navbar-text me-3 text-muted">{{ user.username }}</span></li>
+          <li class="nav-item d-flex align-items-center"><span class="navbar-text me-3 text-muted">{{ user.username }}</span></li>
           <li class="nav-item">
             <form method="post" action="{% url 'accounts:logout' %}" class="d-inline">
               {% csrf_token %}
@@ -436,7 +490,7 @@
   <div class="container">
     <div class="row align-items-center">
       <div class="col-md-6">
-        <span>&copy; Car-Hoot 2026 — automotive electronics learning</span>
+        <span>&copy; MotorMind 2026 — automotive electronics learning</span>
       </div>
       <div class="col-md-6 text-md-end footer-links">
         {% if user.is_staff or user_profile and user_profile.role == 'teacher' %}

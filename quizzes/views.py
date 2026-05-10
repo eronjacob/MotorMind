@@ -75,6 +75,9 @@ class QuizResultView(LoginRequiredMixin, DetailView):
     context_object_name = "quiz"
     pk_url_kwarg = "quiz_id"
 
+    def get_queryset(self):
+        return Quiz.objects.select_related("course")
+
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         attempt = (

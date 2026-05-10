@@ -1022,3 +1022,26 @@ def course_training_video_delete(request, course_id, video_id):
     video.delete()
     messages.success(request, f'Deleted video "{title}".')
     return redirect("accounts:manage_course", pk=course_id)
+
+
+@login_required
+@require_POST
+def course_delete(request, course_id):
+    """
+    Remove the course and all related rows from the app database (CASCADE).
+    Does not delete or re-embed Chroma / vector-store data for linked resources.
+    """
+    course = get_object_or_404(_teacher_course_queryset(request.user), pk=course_id)
+    if not user_can_manage_course(request.user, course):
+        return HttpResponseForbidden()
+    title = course.title
+    pk = course.pk
+    with transaction.atomic():
+        course.delete()
+    logger.info("Course pk=%s title=%r deleted by user_id=%s", pk, title, request.user.pk)
+    messages.success(
+        request,
+        f'Deleted course "{title}" and related database records. '
+        "Linked resources remain in the library; vector embeddings were not modified.",
+    )
+    return redirect("accounts:admin_panel")

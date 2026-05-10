@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}{{ course.title }} — Car-Hoot{% endblock %}
+{% block title %}{{ course.title }} — MotorMind{% endblock %}
 {% block extra_head %}
 <style>
 .course-detail-video-row > .col-lg-6 > .card {
@@ -14,6 +14,12 @@
   overflow-y: auto;
   max-height: 400px;
   min-height: 0;
+}
+.course-detail-breadcrumb {
+  margin-top: 0.25rem;
+}
+.course-quiz-last-score:hover .text-muted {
+  text-decoration: underline;
 }
 .course-transcript {
   white-space: pre-wrap;
@@ -42,8 +48,8 @@
 </style>
 {% endblock %}
 {% block content %}
-<nav aria-label="breadcrumb">
-  <ol class="breadcrumb">
+<nav aria-label="breadcrumb" class="course-detail-breadcrumb pt-4">
+  <ol class="breadcrumb mb-0">
     <li class="breadcrumb-item"><a href="{% url 'courses:course_list' %}">Courses</a></li>
     <li class="breadcrumb-item active">{{ course.title }}</li>
   </ol>
@@ -56,7 +62,7 @@
 <div class="row g-4 mt-2 align-items-stretch course-detail-video-row">
   <div class="col-lg-6 d-flex">
     <div class="card shadow-sm course-video-card flex-fill d-flex flex-column w-100">
-      <div class="card-header fw-semibold">Training video</div>
+      <div class="card-header fw-semibold">Training Video</div>
       <div class="card-body d-flex flex-column flex-grow-1">
         {% if featured_video.youtube_embed_url %}
         <div
@@ -101,13 +107,18 @@
           <ul class="list-unstyled mb-0 small">
             {% for s in featured_video_sections %}
             <li class="mb-2 pb-2{% if not forloop.last %} border-bottom{% endif %}">
-              <div class="fw-medium">{{ s.title }}</div>
-              <div class="text-muted">
-                {% if featured_video.youtube_embed_url %}
-                <button type="button" class="btn btn-link btn-sm p-0 align-baseline course-video-jump" data-start="{{ s.start_seconds }}">{{ s.start_seconds }}s–{{ s.end_seconds }}s</button>
-                {% else %}
-                <a href="{% url 'courses:video_detail' course.pk featured_video.pk %}?t={{ s.start_seconds }}" class="text-reset text-decoration-none">{{ s.start_seconds }}s–{{ s.end_seconds }}s</a>
-                {% endif %}
+              <div class="d-flex justify-content-between align-items-start gap-3">
+                <div class="fw-medium">{{ s.title }}</div>
+                <div class="text-nowrap flex-shrink-0">
+                  {% if featured_video.youtube_embed_url %}
+                  <button type="button"
+                          class="btn btn-sm p-0 text-primary-orange text-decoration-none bg-transparent border-0 shadow-none align-baseline course-video-jump"
+                          data-start="{{ s.start_seconds }}">{{ s.start_seconds }}s–{{ s.end_seconds }}s</button>
+                  {% else %}
+                  <a href="{% url 'courses:video_detail' course.pk featured_video.pk %}?t={{ s.start_seconds }}"
+                     class="text-primary-orange text-decoration-none">{{ s.start_seconds }}s–{{ s.end_seconds }}s</a>
+                  {% endif %}
+                </div>
               </div>
             </li>
             {% empty %}
@@ -156,17 +167,17 @@
   <ul class="list-group list-group-flush">
     {% for row in course_quiz_rows %}
       {% with q=row.quiz last=row.last_attempt %}
-      <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap gap-2">
-        <div>
+      <li class="list-group-item d-flex justify-content-between align-items-start flex-wrap gap-3">
+        <div class="min-w-0">
           <strong>{{ q.title }}</strong>
           <span class="badge bg-secondary ms-2">Pass {{ q.pass_mark }}%</span>
         </div>
-        <div class="d-flex flex-wrap align-items-center gap-2">
+        <div class="d-flex flex-row align-items-center justify-content-end gap-3 flex-wrap flex-shrink-0">
           <a class="btn btn-sm btn-primary" href="{% url 'quizzes:quiz_take' q.pk %}">Start quiz</a>
           {% if last %}
-          <a class="small text-nowrap link-secondary" href="{% url 'quizzes:quiz_result' q.pk %}" title="View your last submission">
-            Last score: <strong class="text-body">{{ last.score }}%</strong>
-            <span class="text-muted">· view submission</span>
+          <a class="small link-secondary course-quiz-last-score text-end" href="{% url 'quizzes:quiz_result' q.pk %}" title="View your last submission">
+            <span class="d-block">Last score: <strong class="text-body">{{ last.score }}%</strong></span>
+            <span class="d-block text-muted">View submission</span>
           </a>
           {% endif %}
         </div>

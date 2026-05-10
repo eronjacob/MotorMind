@@ -1,24 +1,24 @@
 {% extends "base.html" %}
-{% block title %}Teacher admin panel — Car-Hoot{% endblock %}
+{% block title %}Teacher Admin Panel — MotorMind{% endblock %}
 {% block main_classes %}container-fluid px-3 px-sm-4 px-xl-5 pb-5{% endblock %}
 {% block content %}
-<h1 class="h3 mb-3">Teacher admin panel</h1>
+<h1 class="mb-4 pt-4">Teacher Admin Panel</h1>
 <p class="text-muted">
   Manage your courses from the <strong>Courses</strong> card (add / edit includes videos, quizzes, and AR tasks).
-  Use the full <a href="/admin/">Django admin</a> for advanced bulk editing (inlines, filters).
+  Use the full <a class="link-dealer" href="/admin/">Django admin</a> for advanced bulk editing (inlines, filters).
 </p>
 
 <div class="row g-3">
   <div class="col-12 col-lg-6">
     <div class="card shadow-sm h-100 border-primary">
-      <div class="card-header fw-semibold">Resource library / vector search</div>
+      <div class="card-header fw-semibold">Resource Library / Vector Search</div>
       <div class="card-body">
         <p class="small text-muted">
           Upload books, manuals, notes, or transcripts, link them to one or more courses, ingest into ChromaDB,
           and test semantic retrieval for future RAG study pages.
         </p>
-        <a class="btn btn-primary btn-sm mb-2" href="{% url 'resources:dashboard' %}">Manage resources</a>
-        <a class="btn btn-outline-primary btn-sm mb-2" href="{% url 'resources:test_retrieval' %}">Test retrieval</a>
+        <a class="btn btn-primary btn-sm mb-2" href="{% url 'resources:dashboard' %}">Manage Resources</a>
+        <a class="btn btn-outline-primary btn-sm mb-2" href="{% url 'resources:test_retrieval' %}">Test Retrieval</a>
       </div>
     </div>
   </div>
@@ -29,13 +29,13 @@
         <p class="small text-muted mb-2">
           Add a course, then open the course editor to attach videos (and sections), quizzes (and questions), and AR tasks.
         </p>
-        <a class="btn btn-primary btn-sm mb-2" href="{% url 'accounts:manage_course_add' %}">Add course</a>
-        <a class="btn btn-outline-secondary btn-sm mb-2" href="{% url 'courses:course_list' %}">Browse all courses (public)</a>
+        <a class="btn btn-primary btn-sm mb-2" href="{% url 'accounts:manage_course_add' %}">Add Course</a>
+        <a class="btn btn-outline-primary btn-sm mb-2" href="{% url 'courses:course_list' %}">Browse All Courses (Public)</a>
         <h3 class="h6 mt-3">{% if user.is_staff or user.is_superuser %}Courses{% else %}Your courses{% endif %}</h3>
         <ul class="small mb-0 list-unstyled">
           {% for c in courses %}
             <li class="mb-1 d-flex justify-content-between align-items-center gap-2 flex-wrap">
-              <a href="{% url 'accounts:manage_course' c.pk %}">{{ c.title }}</a>
+              <a class="link-dealer" href="{% url 'accounts:manage_course' c.pk %}">{{ c.title }}</a>
               <span class="text-nowrap">
                 <a class="btn btn-sm btn-outline-primary py-0" href="{% url 'accounts:manage_course' c.pk %}">Edit</a>
               </span>

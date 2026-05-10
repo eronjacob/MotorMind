@@ -1,14 +1,15 @@
 {% extends "base.html" %}
-{% block title %}{{ editor_heading }} — Car-Hoot{% endblock %}
+{% block title %}{{ editor_heading }} — MotorMind{% endblock %}
 {% block content %}
 <nav aria-label="breadcrumb">
   <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="{% url 'accounts:admin_panel' %}">Admin panel</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'accounts:admin_panel' %}">Admin Panel</a></li>
     <li class="breadcrumb-item"><a href="{{ back_url }}">{{ course.title }}</a></li>
     <li class="breadcrumb-item active">{{ editor_heading }}</li>
   </ol>
 </nav>
 
+<div class="course-edit-panel">
 {{ quiz_initial|json_script:"quiz-initial-data" }}
 {{ section_options|json_script:"section-options-data" }}
 <input type="hidden" id="ai-suggestions-url" value="{{ ai_suggestions_url }}">
@@ -19,8 +20,8 @@
 <div class="sticky-top bg-white border-bottom py-2 mb-3 shadow-sm" style="z-index: 1020;">
   <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
     <div class="d-flex flex-wrap align-items-center gap-2">
-      <a class="btn btn-outline-secondary btn-sm" href="{{ back_url }}">Back to course</a>
-      <span class="text-muted small d-none d-md-inline">Autosave is manual — click Save quiz.</span>
+      <a class="btn btn-outline-secondary btn-sm" href="{{ back_url }}">Back to Course</a>
+      <span class="text-muted small d-none d-md-inline">Autosave is manual — click Save Quiz.</span>
     </div>
     <div class="d-flex flex-wrap gap-2">
       {% if quiz %}
@@ -28,13 +29,13 @@
       {% else %}
       <button type="button" class="btn btn-outline-secondary btn-sm" disabled title="Save the quiz first to preview">Preview</button>
       {% endif %}
-      <button type="button" class="btn btn-outline-success btn-sm" id="btn-ai-quiz-suggestions">Smart AI suggestions</button>
-      <button type="submit" form="quiz-editor-form" class="btn btn-primary btn-sm">Save quiz</button>
+      <button type="button" class="btn btn-outline-success btn-sm" id="btn-ai-quiz-suggestions">Smart AI Suggestions</button>
+      <button type="submit" form="quiz-editor-form" class="btn btn-primary btn-sm">Save Quiz</button>
     </div>
   </div>
 </div>
 
-<h1 class="h3 mb-3">{{ editor_heading }}</h1>
+<h1 class="mb-4">{{ editor_heading }}</h1>
 
 <form id="quiz-editor-form" method="post" novalidate>
   {% csrf_token %}
@@ -123,6 +124,7 @@
       </div>
     </div>
   </div>
+</div>
 </div>
 
 {% endblock %}
