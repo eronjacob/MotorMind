@@ -2,6 +2,7 @@
 .env
 .env.local
 .env.*.local
+devnet-issuer.json
 
 # Python
 __pycache__/

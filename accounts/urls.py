@@ -41,6 +41,11 @@ urlpatterns = [
     path("dashboard/", DashboardView.as_view(), name="dashboard"),
     path("admin-panel/", AdminPanelView.as_view(), name="admin_panel"),
     path(
+        "admin-panel/progress/quiz-attempt/<int:attempt_id>/delete/",
+        manage_views.quiz_attempt_delete,
+        name="quiz_attempt_delete",
+    ),
+    path(
         "admin-panel/videos/youtube-autofill/",
         manage_views.video_youtube_autofill_api,
         name="video_youtube_autofill",
@@ -116,16 +121,6 @@ urlpatterns = [
         name="manage_course_choice_add",
     ),
     path(
-        "admin-panel/manage/course/<int:course_pk>/ar-tasks/add/",
-        manage_views.NestedARTaskCreateView.as_view(),
-        name="manage_course_ar_add",
-    ),
-    path(
-        "admin-panel/manage/course/<int:course_pk>/ar-steps/add/",
-        manage_views.NestedARTaskStepCreateView.as_view(),
-        name="manage_course_ar_step_add",
-    ),
-    path(
         "admin-panel/manage/course/<int:pk>/",
         manage_views.CourseHubView.as_view(),
         name="manage_course",
@@ -154,15 +149,5 @@ urlpatterns = [
         "admin-panel/manage/choice/add/",
         manage_views.AnswerChoiceCreateView.as_view(),
         name="manage_choice_add",
-    ),
-    path(
-        "admin-panel/manage/ar-task/add/",
-        manage_views.ARTaskCreateView.as_view(),
-        name="manage_ar_task_add",
-    ),
-    path(
-        "admin-panel/manage/ar-step/add/",
-        manage_views.ARTaskStepCreateView.as_view(),
-        name="manage_ar_step_add",
     ),
 ]

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="Short circuit solver">
+  <defs>
+    <linearGradient id="scG" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#66D4FF"/>
+      <stop offset="100%" style="stop-color:#FF8C00"/>
+    </linearGradient>
+    <linearGradient id="scBg" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#141820"/>
+      <stop offset="100%" style="stop-color:#1e2835"/>
+    </linearGradient>
+  </defs>
+  <circle cx="60" cy="60" r="54" fill="url(#scBg)" stroke="url(#scG)" stroke-width="4"/>
+  <path d="M32 68 L48 68 L54 52 L66 76 L72 60 L88 60" fill="none" stroke="#FFBF66" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M58 34 L66 48 L52 48 Z" fill="#FFD700" stroke="#FF8C00" stroke-width="1"/>
+</svg>

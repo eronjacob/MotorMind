@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}{{ quiz.course.title }}: {{ quiz.title }} — Quiz result — MotorMind{% endblock %}
 {% block content %}
-<h1 class="mb-3 pt-4">{{ quiz.course.title }}: {{ quiz.title }}</h1>
+<h1 class="mb-3">{{ quiz.course.title }}: {{ quiz.title }}</h1>
 
 {% if last_attempt %}
   <div class="alert {% if last_attempt.passed %}alert-success{% else %}alert-warning{% endif %} shadow-sm">
@@ -39,6 +39,81 @@
   <p class="small text-muted mb-3">Recorded {{ last_attempt.created_at }}</p>
 {% else %}
   <p class="text-muted">No attempt recorded yet. <a href="{% url 'quizzes:quiz_take' quiz.pk %}">Take the quiz</a>.</p>
+{% endif %}
+
+{% if last_attempt and last_attempt.passed and solana_badge %}
+{% load static %}
+<div class="card shadow-sm mb-4 mt-3 skill-badge-claim-card">
+  <div class="card-header fw-semibold d-flex align-items-center gap-2">
+    <i class="fas fa-certificate text-primary-orange"></i>
+    <span>Claim Solana Devnet badge</span>
+  </div>
+  <div class="card-body">
+    <div class="row g-3 align-items-start">
+      <div class="col-auto">
+        <img src="{% static solana_badge.icon_static_path %}" alt="" width="88" height="88" class="rounded-circle border shadow-sm">
+      </div>
+      <div class="col min-w-0">
+        <h2 class="h6 mb-1">{{ solana_badge.title }}</h2>
+        <p class="small text-muted mb-3">{{ solana_badge.description }}</p>
+        {% if solana_badge.status == "claimed" %}
+          <p class="small mb-2"><span class="badge bg-success">Claimed</span>
+            {% if solana_badge.claimed_at %}<span class="text-muted">· {{ solana_badge.claimed_at }}</span>{% endif %}
+          </p>
+          {% if solana_badge.transaction_signature %}
+            <p class="small mb-1 font-monospace text-break">{{ solana_badge.transaction_signature }}</p>
+            <a class="btn btn-sm btn-outline-primary" href="{{ solana_badge.explorer_url }}" target="_blank" rel="noopener">View on Solana Explorer</a>
+          {% endif %}
+        {% elif solana_badge.status == "claimable" or solana_badge.status == "failed" %}
+          {% if solana_badge.metadata.claim_error_code == "issuer_unfunded" %}
+            <div class="alert alert-warning small mb-3">
+              <p class="fw-semibold mb-2">Badge not claimed yet: the project issuer wallet needs Devnet SOL.</p>
+              {% if solana_badge.metadata.issuer_public_key %}
+                {% include "solana_badges/_issuer_faucet_help.html" with issuer_public_key=solana_badge.metadata.issuer_public_key faucet_url=solana_badge.metadata.faucet_url network=solana_badge.metadata.network %}
+              {% elif solana_issuer_diag and solana_issuer_diag.pubkey %}
+                {% include "solana_badges/_issuer_faucet_help.html" with issuer_public_key=solana_issuer_diag.pubkey %}
+              {% endif %}
+            </div>
+          {% elif solana_badge.status == "failed" and solana_badge.error_message %}
+            <div class="alert alert-warning small py-2 mb-3">{{ solana_badge.error_message|truncatechars:280 }}</div>
+          {% endif %}
+          <p class="small text-muted mb-2">Optional proof on Devnet (memo only). Use a Devnet wallet you control.</p>
+          <form method="post" action="{% url 'solana_badges:claim_quiz_badge' last_attempt.pk %}">
+            {% csrf_token %}
+            <label class="form-label small mb-1" for="claim-wallet-{{ last_attempt.pk }}">Wallet address</label>
+            <div class="d-flex flex-column flex-sm-row gap-2 align-items-stretch align-items-sm-center">
+              <input class="form-control form-control-sm flex-grow-1 min-w-0" id="claim-wallet-{{ last_attempt.pk }}" type="text" name="wallet_address"
+                     value="{{ wallet_profile.wallet_address|default:'' }}" placeholder="Devnet Solana address" autocomplete="off">
+              <button type="submit" class="btn btn-sm btn-primary text-nowrap">
+                {% if solana_badge.metadata.claim_error_code == "issuer_unfunded" %}Retry claim{% else %}Claim badge{% endif %}
+              </button>
+            </div>
+            <div class="form-text mt-1">Use a Solana Devnet wallet for demo purposes.</div>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% if show_solana_ops and solana_issuer_diag %}
+<div class="card border-secondary mb-4 mt-2">
+  <div class="card-header py-2 small fw-semibold">Solana Devnet status (teacher / admin)</div>
+  <div class="card-body small py-2">
+    <dl class="row mb-0">
+      <dt class="col-sm-4 text-muted">Configured</dt>
+      <dd class="col-sm-8">{% if solana_issuer_diag.configured %}Yes{% else %}No{% endif %}</dd>
+      <dt class="col-sm-4 text-muted">Issuer public key</dt>
+      <dd class="col-sm-8 text-break font-monospace">{{ solana_issuer_diag.pubkey|default:"—" }}</dd>
+      <dt class="col-sm-4 text-muted">Issuer balance</dt>
+      <dd class="col-sm-8">{% if solana_issuer_diag.balance_sol is not None %}{{ solana_issuer_diag.balance_sol }} SOL{% else %}—{% endif %}</dd>
+      <dt class="col-sm-4 text-muted">Badge claims</dt>
+      <dd class="col-sm-8">{% if solana_issuer_diag.ready %}<span class="text-success fw-semibold">Ready</span>{% else %}<span class="text-warning fw-semibold">Not ready</span>{% endif %}</dd>
+    </dl>
+    <p class="text-muted mb-0 mt-2 small">{{ solana_issuer_diag.message }}</p>
+  </div>
+</div>
 {% endif %}
 
 <div class="d-flex flex-wrap gap-2">

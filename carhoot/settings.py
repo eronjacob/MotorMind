@@ -27,6 +27,18 @@ ALLOWED_HOSTS = [
     if h.strip()
 ]
 
+# CSRF: In DEBUG, trust common runserver origins so opening the site as localhost vs 127.0.0.1
+# does not make the POST Referer/Origin fail CSRF checks. In production, set CSRF_TRUSTED_ORIGINS
+# explicitly (comma-separated, e.g. https://yourdomain.com).
+_csrf_trusted = os.environ.get("CSRF_TRUSTED_ORIGINS", "").strip()
+if _csrf_trusted:
+    CSRF_TRUSTED_ORIGINS = [h.strip() for h in _csrf_trusted.split(",") if h.strip()]
+elif DEBUG:
+    CSRF_TRUSTED_ORIGINS = [
+        "http://127.0.0.1:8000",
+        "http://localhost:8000",
+    ]
+
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -43,6 +55,7 @@ INSTALLED_APPS = [
     "study_content",
     "tutor",
     "api",
+    "solana_badges",
 ]
 
 MIDDLEWARE = [
@@ -123,6 +136,14 @@ GOOGLE_MODEL_NAME = os.environ.get("GOOGLE_MODEL_NAME", "gemma-3-27b-it")
 ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY", "")
 ELEVENLABS_VOICE_ID = os.environ.get("ELEVENLABS_VOICE_ID", "")
 ELEVENLABS_MODEL = os.environ.get("ELEVENLABS_MODEL", "eleven_multilingual_v2")
+
+# --- Solana Devnet (optional skill-badge proofs; never use mainnet keys here) ---
+SOLANA_RPC_URL = os.environ.get(
+    "SOLANA_RPC_URL",
+    "https://api.devnet.solana.com",
+)
+SOLANA_NETWORK = os.environ.get("SOLANA_NETWORK", "devnet")
+SOLANA_ISSUER_PRIVATE_KEY = os.environ.get("SOLANA_ISSUER_PRIVATE_KEY", "")
 
 LOGIN_URL = "/login/"
 LOGIN_REDIRECT_URL = "/dashboard/"

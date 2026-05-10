@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Teacher Admin Panel — MotorMind{% endblock %}
-{% block main_classes %}container-fluid px-3 px-sm-4 px-xl-5 pb-5{% endblock %}
+{% block main_classes %}container-fluid px-3 px-sm-4 px-xl-5 pb-5 pt-4{% endblock %}
 {% block content %}
 <h1 class="mb-4 pt-4">Teacher Admin Panel</h1>
 <p class="text-muted">
-  Manage your courses from the <strong>Courses</strong> card (add / edit includes videos, quizzes, and AR tasks).
+  Manage your courses from the <strong>Courses</strong> card (add / edit includes videos and quizzes).
   Use the full <a class="link-dealer" href="/admin/">Django admin</a> for advanced bulk editing (inlines, filters).
 </p>
 
@@ -27,21 +27,49 @@
       <div class="card-header fw-semibold">Courses</div>
       <div class="card-body">
         <p class="small text-muted mb-2">
-          Add a course, then open the course editor to attach videos (and sections), quizzes (and questions), and AR tasks.
+          Add a course, then open the course editor to attach videos (and sections) and quizzes (and questions).
         </p>
         <a class="btn btn-primary btn-sm mb-2" href="{% url 'accounts:manage_course_add' %}">Add Course</a>
         <a class="btn btn-outline-primary btn-sm mb-2" href="{% url 'courses:course_list' %}">Browse All Courses (Public)</a>
-        <h3 class="h6 mt-3">{% if user.is_staff or user.is_superuser %}Courses{% else %}Your courses{% endif %}</h3>
+        <p class="small text-muted mb-2">
+          The public course list shows every course. Below lists all courses in the database with their owner.
+          “Your courses” in the old sense meant <code>created_by</code> = you — a course created by someone else
+          (for example during testing) will appear publicly but only shows Edit/Delete here if you own it or you are staff.
+        </p>
+        <h3 class="h6 mt-2">All courses</h3>
         <ul class="small mb-0 list-unstyled">
-          {% for c in courses %}
-            <li class="mb-1 d-flex justify-content-between align-items-center gap-2 flex-wrap">
-              <a class="link-dealer" href="{% url 'accounts:manage_course' c.pk %}">{{ c.title }}</a>
-              <span class="text-nowrap">
-                <a class="btn btn-sm btn-outline-primary py-0" href="{% url 'accounts:manage_course' c.pk %}">Edit</a>
-              </span>
+          {% for row in courses_rows %}
+            {% with c=row.course %}
+            <li class="mb-2 pb-2 border-bottom border-light">
+              <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
+                <div>
+                  <a class="link-dealer fw-semibold" href="{% if row.can_manage %}{% url 'accounts:manage_course' c.pk %}{% else %}{% url 'courses:course_detail' c.pk %}{% endif %}">{{ c.title }}</a>
+                  <div class="text-muted">
+                    Owner:
+                    {% if c.created_by %}
+                      {{ c.created_by.username }}
+                    {% else %}
+                      No owner
+                    {% endif %}
+                  </div>
+                </div>
+                <span class="text-nowrap d-flex gap-1 align-items-center">
+                  {% if row.can_manage %}
+                    <a class="btn btn-sm btn-outline-primary py-0" href="{% url 'accounts:manage_course' c.pk %}">Edit</a>
+                    <form method="post" action="{% url 'accounts:manage_course_delete' c.pk %}" class="d-inline"
+                          onsubmit="return confirm('Delete course &quot;{{ c.title|escapejs }}&quot; and all related lessons, quizzes, and attempts?');">
+                      {% csrf_token %}
+                      <button type="submit" class="btn btn-sm btn-outline-danger py-0">Delete</button>
+                    </form>
+                  {% else %}
+                    <a class="btn btn-sm btn-outline-secondary py-0" href="{% url 'courses:course_detail' c.pk %}">View</a>
+                  {% endif %}
+                </span>
+              </div>
             </li>
+            {% endwith %}
           {% empty %}
-            <li class="text-muted">{% if user.is_staff or user.is_superuser %}No courses in the database yet.{% else %}You have not created any courses yet.{% endif %} Use “Add course” above.</li>
+            <li class="text-muted">No courses in the database yet. Use “Add course” above.</li>
           {% endfor %}
         </ul>
       </div>
@@ -51,41 +79,45 @@
     <div class="card shadow-sm">
       <div class="card-header fw-semibold">Student progress</div>
       <div class="card-body">
-        <p class="small text-muted mb-2">Snapshot of recent quiz attempts and AR progress.</p>
+        <p class="small text-muted mb-2">Snapshot of recent quiz attempts.</p>
         <div class="row g-3">
-          <div class="col-md-6">
+          <div class="col-12">
             <h3 class="h6">Quiz attempts</h3>
             <div class="table-responsive">
               <table class="table table-sm">
-                <thead><tr><th>User</th><th>Quiz</th><th>Score</th></tr></thead>
+                <thead>
+                  <tr>
+                    <th>User</th>
+                    <th>Quiz</th>
+                    <th>Score</th>
+                    <th>Recorded</th>
+                    <th class="text-end">Actions</th>
+                  </tr>
+                </thead>
                 <tbody>
-                  {% for a in recent_quiz_attempts %}
+                  {% for row in recent_quiz_attempt_rows %}
+                    {% with a=row.attempt %}
                     <tr>
                       <td>{{ a.student.username }}</td>
                       <td class="small">{{ a.quiz.title }}</td>
                       <td>{{ a.score }}%</td>
+                      <td class="small text-nowrap">{{ a.created_at }}</td>
+                      <td class="text-end">
+                        {% if row.can_delete %}
+                          <form method="post" action="{% url 'accounts:quiz_attempt_delete' a.pk %}" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-outline-danger"
+                                    title="Delete attempt"
+                                    onclick="return confirm('Delete this quiz attempt? This may also remove related claimable badge records.');">×</button>
+                          </form>
+                        {% else %}
+                          <span class="text-muted small">—</span>
+                        {% endif %}
+                      </td>
                     </tr>
+                    {% endwith %}
                   {% empty %}
-                    <tr><td colspan="3" class="text-muted">None</td></tr>
-                  {% endfor %}
-                </tbody>
-              </table>
-            </div>
-          </div>
-          <div class="col-md-6">
-            <h3 class="h6">AR progress</h3>
-            <div class="table-responsive">
-              <table class="table table-sm">
-                <thead><tr><th>User</th><th>Task</th><th>Status</th></tr></thead>
-                <tbody>
-                  {% for p in recent_ar_progress %}
-                    <tr>
-                      <td>{{ p.student.username }}</td>
-                      <td class="small">{{ p.task.title }}</td>
-                      <td>{{ p.get_status_display }}</td>
-                    </tr>
-                  {% empty %}
-                    <tr><td colspan="3" class="text-muted">None</td></tr>
+                    <tr><td colspan="5" class="text-muted">None</td></tr>
                   {% endfor %}
                 </tbody>
               </table>

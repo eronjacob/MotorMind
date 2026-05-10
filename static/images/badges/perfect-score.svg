@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="Perfect score">
+  <defs>
+    <linearGradient id="psG" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFE566"/>
+      <stop offset="50%" style="stop-color:#FFB347"/>
+      <stop offset="100%" style="stop-color:#FF8C00"/>
+    </linearGradient>
+    <linearGradient id="psBg" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#1a1408"/>
+      <stop offset="100%" style="stop-color:#2d2410"/>
+    </linearGradient>
+  </defs>
+  <circle cx="60" cy="60" r="54" fill="url(#psBg)" stroke="url(#psG)" stroke-width="4"/>
+  <path d="M60 28 L66 46 L86 46 L70 58 L76 78 L60 66 L44 78 L50 58 L34 46 L54 46 Z" fill="none" stroke="#FFD700" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M48 72 L56 80 L74 58" fill="none" stroke="#FFBF66" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

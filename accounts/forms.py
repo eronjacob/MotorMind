@@ -1,7 +1,6 @@
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm
 
-from ar_tasks.models import ARTask, ARTaskStep
 from courses.models import Course, TrainingVideo, VideoSection
 from quizzes.models import AnswerChoice, Question, Quiz
 
@@ -156,47 +155,3 @@ class AnswerChoiceForm(forms.ModelForm):
         }
 
 
-class ARTaskForm(forms.ModelForm):
-    class Meta:
-        model = ARTask
-        fields = (
-            "course",
-            "title",
-            "description",
-            "target_object",
-            "scenario_text",
-            "expected_action",
-            "linked_video_section",
-            "difficulty",
-        )
-        widgets = {
-            "course": forms.Select(attrs={"class": "form-select"}),
-            "title": forms.TextInput(attrs={"class": "form-control"}),
-            "description": forms.Textarea(attrs={"class": "form-control", "rows": 2}),
-            "target_object": forms.Select(attrs={"class": "form-select"}),
-            "scenario_text": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
-            "expected_action": forms.Textarea(attrs={"class": "form-control", "rows": 2}),
-            "linked_video_section": forms.Select(attrs={"class": "form-select"}),
-            "difficulty": forms.Select(attrs={"class": "form-select"}),
-        }
-
-
-class ARTaskStepForm(forms.ModelForm):
-    class Meta:
-        model = ARTaskStep
-        fields = (
-            "task",
-            "order",
-            "instruction",
-            "expected_reading",
-            "explanation",
-            "video_timestamp_seconds",
-        )
-        widgets = {
-            "task": forms.Select(attrs={"class": "form-select"}),
-            "order": forms.NumberInput(attrs={"class": "form-control"}),
-            "instruction": forms.Textarea(attrs={"class": "form-control", "rows": 2}),
-            "expected_reading": forms.TextInput(attrs={"class": "form-control"}),
-            "explanation": forms.Textarea(attrs={"class": "form-control", "rows": 2}),
-            "video_timestamp_seconds": forms.NumberInput(attrs={"class": "form-control"}),
-        }

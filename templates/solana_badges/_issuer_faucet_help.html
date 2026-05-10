@@ -1,0 +1,11 @@
+{# Expects: issuer_public_key, faucet_url (optional), network (optional) #}
+<div class="border rounded p-3 bg-light small mb-0">
+  <p class="fw-semibold mb-2">Fund the project issuer wallet (Devnet)</p>
+  <p class="mb-1 text-muted">Issuer public key</p>
+  <p class="font-monospace text-break mb-2">{{ issuer_public_key }}</p>
+  <p class="mb-2">
+    <a href="{{ faucet_url|default:'https://faucet.solana.com/' }}" target="_blank" rel="noopener">Solana Devnet faucet</a>
+    · Network: <strong>{{ network|default:"devnet" }}</strong>
+  </p>
+  <p class="mb-0 text-muted">After the faucet confirms, submit <strong>Claim badge</strong> again. Private keys are never shown in the app.</p>
+</div>

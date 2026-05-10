@@ -106,9 +106,10 @@ class QuizTakeView(LoginRequiredMixin, FormView):
         else:
             elapsed = None
 
+        attempt = None
         try:
             with transaction.atomic():
-                QuizAttempt.objects.create(
+                attempt = QuizAttempt.objects.create(
                     quiz=self.quiz,
                     student=self.request.user,
                     score=score,
@@ -126,16 +127,17 @@ class QuizTakeView(LoginRequiredMixin, FormView):
             )
             return redirect("quizzes:quiz_result", quiz_id=self.quiz.pk)
 
+        if attempt and passed:
+            from solana_badges.services.quiz_badges import ensure_quiz_pass_skill_badge
+
+            ensure_quiz_pass_skill_badge(attempt)
+
         if sub_key in self.request.session:
             del self.request.session[sub_key]
         if start_key in self.request.session:
             del self.request.session[start_key]
         self.request.session.modified = True
 
-        messages.success(
-            self.request,
-            "Quiz submitted — see your result on the next page.",
-        )
         return redirect("quizzes:quiz_result", quiz_id=self.quiz.pk)
 
 
@@ -159,6 +161,39 @@ class QuizResultView(LoginRequiredMixin, DetailView):
         ctx["score"] = attempt.score if attempt else None
         ctx["passed"] = attempt.passed if attempt else None
         ctx["user_rank"] = rank_for_user(self.object.pk, self.request.user.pk)
+
+        ctx["solana_badge"] = None
+        ctx["wallet_profile"] = None
+        if attempt:
+            from solana_badges.models import SkillBadge, SolanaWalletProfile
+
+            ctx["solana_badge"] = SkillBadge.objects.filter(
+                quiz_attempt=attempt,
+                student=self.request.user,
+                badge_type=SkillBadge.BadgeType.QUIZ_PASS,
+            ).first()
+            ctx["wallet_profile"] = SolanaWalletProfile.objects.filter(
+                user=self.request.user
+            ).first()
+
+        u = self.request.user
+        show_solana_ops = u.is_staff
+        if not show_solana_ops:
+            try:
+                from accounts.models import Profile
+
+                show_solana_ops = u.profile.role == Profile.Role.TEACHER
+            except Profile.DoesNotExist:
+                pass
+        if show_solana_ops:
+            from solana_badges.services.solana_client import issuer_public_health_summary
+
+            ctx["show_solana_ops"] = True
+            ctx["solana_issuer_diag"] = issuer_public_health_summary()
+        else:
+            ctx["show_solana_ops"] = False
+            ctx["solana_issuer_diag"] = None
+
         return ctx
 
 

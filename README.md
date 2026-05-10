@@ -80,6 +80,49 @@ Django admin: http://127.0.0.1:8000/admin/ — create a superuser with `python3 
 - `resources/` — **Resource library**, ingestion jobs, retrieval logs, Chroma vector services
 - `api/` — DRF serializers and read-mostly endpoints for mobile clients
 - `templates/` — Bootstrap 5 base layout and page templates
+- `solana_badges/` — optional **Solana Devnet** “Proof of Skill” memo transactions after passing a quiz (not NFTs)
+
+## Solana Devnet setup (optional skill badges)
+
+Badges record a short **on-chain memo** on **Devnet** only (issuer wallet pays fees). **No Solana API key** is required for the public Devnet RPC. Public RPCs and faucets can be **rate-limited**; if airdrops fail, retry later or use another Devnet faucet.
+
+**Do not** use mainnet or real-money wallets for this prototype. Keep issuer keys out of git (`.env` and `devnet-issuer.json` are gitignored).
+
+### Configure the issuer
+
+1. (Optional) Install the [Solana CLI](https://docs.solana.com/cli/install-solana-cli-tools) and create a **Devnet** keypair, or generate a keypair in code and export the **64-byte secret** as a JSON array.
+2. Add to `.env` (copy from `.env.example`):
+   - `SOLANA_RPC_URL=https://api.devnet.solana.com` (default if omitted)
+   - `SOLANA_NETWORK=devnet`
+   - `SOLANA_ISSUER_PRIVATE_KEY=[...]` — JSON array of **32** (seed) or **64** (full secret) byte values. **Never commit** this value.
+3. **Fund the issuer’s public address** with Devnet SOL (required before claims succeed):
+   - Web: [Solana Devnet faucet](https://faucet.solana.com/)
+   - CLI: `solana airdrop 1 <ISSUER_PUBKEY> --url devnet` (when the faucet allows it)
+
+### Check readiness
+
+```bash
+python manage.py migrate
+python manage.py check_solana_badges
+```
+
+You should see the **issuer public key**, **balance in SOL**, and either **READY** or **NOT READY** (with the address to fund). The command **never prints** the private key.
+
+### Test memo transaction
+
+After `check_solana_badges` reports **READY**:
+
+```bash
+python manage.py send_test_solana_badge --wallet <any_devnet_pubkey_for_your_notes>
+```
+
+This sends a memo `Car-Hoot test badge transaction` and prints the **signature** and **Solana Explorer** link. If the issuer has **no SOL**, the command exits with a clear message and does **not** send.
+
+### In the app
+
+- After a **passed** quiz, students see **Claim Solana Devnet badge** on the result page.
+- If the issuer is **unfunded**, the UI explains that the **project issuer** needs Devnet SOL and links the faucet (no private keys shown).
+- **Teachers / staff** see a **Solana Devnet status** panel on the quiz result page and on **Profile** (`/profile/`).
 
 ## URLs (web)
 
@@ -98,6 +141,9 @@ Django admin: http://127.0.0.1:8000/admin/ — create a superuser with `python3 
 | `/admin-panel/resources/test/` | **Teacher-only** retrieval test UI |
 | `/admin-panel/videos/youtube-autofill/` | **Teacher-only** POST JSON — oEmbed + captions for the video form |
 | `/admin-panel/videos/ai-description/` | **Teacher-only** POST JSON — optional Gemini/Gemma description |
+| `/profile/` | User profile (wallet, badges, quiz progress); teachers see Solana Devnet diagnostics |
+| `/leaderboard/` | Off-chain site leaderboard (badges / quiz stats) |
+| `/badges/claim/quiz-attempt/<id>/` | POST — claim Devnet memo badge for a passed attempt |
 
 ## Resource library / vector database
 

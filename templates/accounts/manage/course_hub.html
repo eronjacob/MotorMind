@@ -13,7 +13,7 @@
 <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
   <div>
     <h1 class="mb-4">Edit Course</h1>
-    <p class="text-muted mb-0 small">Manage videos, sections, quizzes, and AR tasks for this course.</p>
+    <p class="text-muted mb-0 small">Manage videos, sections, and quizzes for this course.</p>
   </div>
   <div class="d-flex flex-wrap gap-2 flex-shrink-0 align-items-start">
     <a class="btn btn-outline-secondary btn-sm" href="{% url 'accounts:admin_panel' %}">Back to admin panel</a>
@@ -126,28 +126,6 @@
           </ul>
         {% else %}
           <p class="text-muted small mb-0">No quizzes yet.</p>
-        {% endif %}
-      </div>
-    </div>
-
-    <div class="card shadow-sm h-100">
-      <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-        <span class="fw-semibold">AR Tasks</span>
-        <a class="btn btn-sm btn-primary" href="{% url 'accounts:manage_course_ar_add' course.pk %}">Add AR Task</a>
-      </div>
-      <div class="card-body">
-        {% if ar_tasks %}
-          <ul class="list-group list-group-flush small">
-            {% for t in ar_tasks %}
-              <li class="list-group-item">
-                <div class="fw-semibold">{{ t.title }}</div>
-                <p class="text-muted mb-2">{{ t.get_target_object_display }} · {{ t.get_difficulty_display }}</p>
-                <a class="btn btn-sm btn-outline-primary" href="{% url 'accounts:manage_course_ar_step_add' course.pk %}?task={{ t.pk }}">Add Step</a>
-              </li>
-            {% endfor %}
-          </ul>
-        {% else %}
-          <p class="text-muted small mb-0">No AR tasks yet.</p>
         {% endif %}
       </div>
     </div>
@@ -291,42 +269,42 @@
           <option value="{{ v.pk }}">{{ v.title|truncatechars:48 }}</option>
         {% endfor %}
       </select>
-      {% if reading_latest_chunks %}
-        {{ reading_chunks_preview|json_script:"course-hub-chunks-json" }}
-        <p class="small text-muted mb-1">Latest retrieval — click a row for full chunk text.</p>
-        <div class="table-responsive border rounded bg-white">
-          <table class="table table-sm table-hover align-middle mb-0" id="reading-chunks-preview-table">
-            <thead class="table-light">
-              <tr>
-                <th scope="col">#</th>
-                <th scope="col">Resource</th>
-                <th scope="col">Author</th>
-                <th scope="col">Page</th>
-                <th scope="col">Score</th>
-                <th scope="col">Preview</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for ch in reading_latest_chunks %}
-                <tr class="reading-chunk-row" style="cursor: pointer;" role="button" tabindex="0" data-chunk-idx="{{ forloop.counter0 }}" title="Click to open full chunk">
-                  <td class="text-nowrap small">{{ ch.citation_label|default:"—" }}</td>
-                  <td class="small">{{ ch.resource_title|default:ch.source_title|truncatechars:40|default:"—" }}</td>
-                  <td class="small">{{ ch.author|default:"—"|truncatechars:24 }}</td>
-                  <td class="small text-nowrap">{% if ch.page_number %}{{ ch.page_number }}{% else %}—{% endif %}</td>
-                  <td class="small text-nowrap">{% if ch.score != None %}{{ ch.score|floatformat:3 }}{% else %}—{% endif %}</td>
-                  <td class="small text-muted">{{ ch.chunk_text|truncatewords:22 }}</td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      {% else %}
-        <p class="small text-muted mb-2">No saved chunks yet — run “Find top 5 chunks” after linking resources and adding transcripts.</p>
-      {% endif %}
       <div class="mt-2">
         <button type="submit" class="btn btn-sm btn-outline-primary">Find Top 5 Chunks</button>
       </div>
     </form>
+    {% if reading_latest_chunks %}
+      {{ reading_chunks_preview|json_script:"course-hub-chunks-json" }}
+      <p class="small text-muted mb-1">Latest retrieval — click a row for full chunk text.</p>
+      <div class="table-responsive border rounded bg-white mb-3">
+        <table class="table table-sm table-hover align-middle mb-0" id="reading-chunks-preview-table">
+          <thead class="table-light">
+            <tr>
+              <th scope="col">#</th>
+              <th scope="col">Resource</th>
+              <th scope="col">Author</th>
+              <th scope="col">Page</th>
+              <th scope="col">Score</th>
+              <th scope="col">Preview</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for ch in reading_latest_chunks %}
+              <tr class="reading-chunk-row" style="cursor: pointer;" role="button" tabindex="0" data-chunk-idx="{{ forloop.counter0 }}" title="Click to open full chunk">
+                <td class="text-nowrap small">{{ ch.citation_label|default:"—" }}</td>
+                <td class="small">{{ ch.resource_title|default:ch.source_title|truncatechars:40|default:"—" }}</td>
+                <td class="small">{{ ch.author|default:"—"|truncatechars:24 }}</td>
+                <td class="small text-nowrap">{% if ch.page_number %}{{ ch.page_number }}{% else %}—{% endif %}</td>
+                <td class="small text-nowrap">{% if ch.score != None %}{{ ch.score|floatformat:3 }}{% else %}—{% endif %}</td>
+                <td class="small text-muted">{{ ch.chunk_text|truncatewords:22 }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="small text-muted mb-2">No saved chunks yet — run “Find top 5 chunks” after linking resources and adding transcripts.</p>
+    {% endif %}
 
     <div class="modal fade" id="readingChunkDetailModal" tabindex="-1" aria-labelledby="readingChunkDetailLabel" aria-hidden="true">
       <div class="modal-dialog modal-lg modal-dialog-scrollable">
@@ -370,7 +348,7 @@
 
 <p class="small text-muted mt-3 mb-0">
   For bulk edits, filters, and inlines you can still use the
-  <a href="/admin/">Django admin</a> (courses, videos, quizzes, AR tasks).
+  <a href="/admin/">Django admin</a> (courses, videos, quizzes).
 </p>
 
 <hr class="my-4">
@@ -379,8 +357,8 @@
     <h2 class="h6 text-danger mb-2">Delete course</h2>
     <p class="small text-muted mb-3">
       Permanently remove this course and all related <strong>database</strong> records
-      (videos, sections, quizzes, quiz attempts, tutor conversations, reading pages/contexts,
-      AR tasks and student progress). Course links on shared library resources are removed;
+      (videos, sections, quizzes, quiz attempts, tutor conversations, reading pages/contexts).
+      Course links on shared library resources are removed;
       the resources themselves and their <strong>vector index</strong> entries are <strong>not</strong> deleted or changed.
     </p>
     <form method="post"
@@ -453,9 +431,12 @@
   var chunks = [];
   try { chunks = JSON.parse(dataEl.textContent || '[]'); } catch (e) {}
   var modalEl = document.getElementById('readingChunkDetailModal');
-  var modal = modalEl && window.bootstrap ? new bootstrap.Modal(modalEl) : null;
+  if (!modalEl || !window.bootstrap) return;
+  var modal = bootstrap.Modal.getOrCreateInstance(modalEl);
   var metaEl = document.getElementById('reading-chunk-meta');
   var fullEl = document.getElementById('reading-chunk-full');
+  var table = document.getElementById('reading-chunks-preview-table');
+  if (!metaEl || !fullEl || !table) return;
 
   function esc(s) {
     if (s == null || s === '') return '—';
@@ -466,7 +447,7 @@
 
   function openChunk(idx) {
     var c = chunks[idx];
-    if (!c || !modal) return;
+    if (!c) return;
     document.getElementById('readingChunkDetailLabel').textContent = 'Chunk ' + (c.label || (idx + 1));
     metaEl.innerHTML =
       '<dt class="col-sm-3">Label</dt><dd class="col-sm-9">' + esc(c.label) + '</dd>' +
@@ -479,17 +460,22 @@
     modal.show();
   }
 
-  document.querySelectorAll('.reading-chunk-row').forEach(function (row) {
-    row.addEventListener('click', function () {
-      var idx = parseInt(row.getAttribute('data-chunk-idx'), 10);
-      if (!isNaN(idx)) openChunk(idx);
-    });
-    row.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        row.click();
-      }
-    });
+  table.addEventListener('click', function (e) {
+    var row = e.target.closest('.reading-chunk-row');
+    if (!row || !table.contains(row)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    var idx = parseInt(row.getAttribute('data-chunk-idx'), 10);
+    if (!isNaN(idx)) openChunk(idx);
+  });
+  table.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    var row = e.target.closest('.reading-chunk-row');
+    if (!row || !table.contains(row)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    var idx = parseInt(row.getAttribute('data-chunk-idx'), 10);
+    if (!isNaN(idx)) openChunk(idx);
   });
 })();
 </script>

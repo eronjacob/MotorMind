@@ -14,16 +14,13 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods, require_POST
 from django.views.generic import CreateView, UpdateView
 
-from ar_tasks.models import ARTask, ARTaskStep
 from courses.models import Course, TrainingVideo, VideoSection
-from quizzes.models import Question, Quiz
+from quizzes.models import Question, Quiz, QuizAttempt
 from quizzes.quiz_editor_save import QuizEditorSaveError, quiz_to_editor_payload, save_quiz_from_payload
 from quizzes.services.ai_quiz_suggestions import get_quiz_ai_gate
 
 from .forms import (
     AnswerChoiceForm,
-    ARTaskForm,
-    ARTaskStepForm,
     CourseForm,
     QuestionForm,
     QuizForm,
@@ -46,6 +43,29 @@ def user_can_manage_course(user, course) -> bool:
     if profile is None or profile.role != Profile.Role.TEACHER:
         return False
     return course.created_by_id == user.pk
+
+
+def user_can_delete_quiz_attempt(user, attempt: QuizAttempt) -> bool:
+    """Staff/superuser or the teacher who owns the course containing this quiz."""
+    if not user.is_authenticated:
+        return False
+    if user.is_superuser or user.is_staff:
+        return True
+    profile = getattr(user, "profile", None)
+    if profile is None or profile.role != Profile.Role.TEACHER:
+        return False
+    course = getattr(getattr(attempt, "quiz", None), "course", None)
+    if course is None:
+        return False
+    return course.created_by_id == user.pk
+
+
+def quiz_attempts_for_teacher_panel(user, limit: int = 50):
+    """Quiz attempts for courses this teacher owns; staff see all recent."""
+    qs = QuizAttempt.objects.select_related("quiz", "quiz__course", "student")
+    if user.is_superuser or user.is_staff:
+        return qs.order_by("-created_at")[:limit]
+    return qs.filter(quiz__course__created_by=user).order_by("-created_at")[:limit]
 
 
 def _teacher_course_queryset(user):
@@ -128,7 +148,7 @@ class NestedCourseManageMixin:
 
 class CourseHubView(TeacherRequiredMixin, UpdateView):
     """
-    Edit course metadata and jump off to add videos, sections, quizzes, AR tasks
+    Edit course metadata and jump off to add videos, sections, and quizzes
     scoped to this course.
     """
 
@@ -159,7 +179,6 @@ class CourseHubView(TeacherRequiredMixin, UpdateView):
             course.quizzes.annotate(num_questions=Count("questions", distinct=True))
             .order_by("pk")
         )
-        ctx["ar_tasks"] = course.ar_tasks.order_by("pk")
         ctx["cancel_url"] = reverse("accounts:admin_panel")
         ctx["resources_module_available"] = False
         ctx["linked_resources"] = []
@@ -266,7 +285,7 @@ class CourseCreateView(BaseManageCreateView):
 
     def form_valid(self, form):
         form.instance.created_by = self.request.user
-        messages.success(self.request, "Course created — add videos, quizzes, and AR tasks below.")
+        messages.success(self.request, "Course created — add videos and quizzes below.")
         return super().form_valid(form)
 
     def get_success_url(self):
@@ -490,65 +509,6 @@ class NestedAnswerChoiceCreateView(NestedCourseManageMixin, BaseManageCreateView
 
     def form_valid(self, form):
         messages.success(self.request, "Answer choice added.")
-        return super().form_valid(form)
-
-
-class ARTaskCreateView(BaseManageCreateView):
-    form_class = ARTaskForm
-    template_name = "accounts/manage/ar_task_form.html"
-
-    def get_success_url(self):
-        return reverse("accounts:admin_panel")
-
-
-class NestedARTaskCreateView(NestedCourseManageMixin, BaseManageCreateView):
-    form_class = ARTaskForm
-    template_name = "accounts/manage/ar_task_form.html"
-
-    def get_initial(self):
-        return {**super().get_initial(), "course": self.nested_course_id}
-
-    def get_form(self, form_class=None):
-        form = super().get_form(form_class)
-        form.fields["course"].queryset = Course.objects.filter(pk=self.nested_course_id)
-        form.fields["linked_video_section"].queryset = VideoSection.objects.filter(
-            video__course_id=self.nested_course_id
-        )
-        return form
-
-    def form_valid(self, form):
-        messages.success(self.request, "AR task added.")
-        return super().form_valid(form)
-
-
-class ARTaskStepCreateView(BaseManageCreateView):
-    form_class = ARTaskStepForm
-    template_name = "accounts/manage/ar_task_step_form.html"
-
-    def get_success_url(self):
-        return reverse("accounts:admin_panel")
-
-
-class NestedARTaskStepCreateView(NestedCourseManageMixin, BaseManageCreateView):
-    form_class = ARTaskStepForm
-    template_name = "accounts/manage/ar_task_step_form.html"
-
-    def get_initial(self):
-        initial = super().get_initial()
-        tid = self.request.GET.get("task")
-        if tid and str(tid).isdigit():
-            tpk = int(tid)
-            if ARTask.objects.filter(pk=tpk, course_id=self.nested_course_id).exists():
-                initial["task"] = tpk
-        return initial
-
-    def get_form(self, form_class=None):
-        form = super().get_form(form_class)
-        form.fields["task"].queryset = ARTask.objects.filter(course_id=self.nested_course_id)
-        return form
-
-    def form_valid(self, form):
-        messages.success(self.request, "AR step added.")
         return super().form_valid(form)
 
 
@@ -1044,4 +1004,42 @@ def course_delete(request, course_id):
         f'Deleted course "{title}" and related database records. '
         "Linked resources remain in the library; vector embeddings were not modified.",
     )
+    return redirect("accounts:admin_panel")
+
+
+@login_required
+@require_POST
+def quiz_attempt_delete(request, attempt_id):
+    """
+    Teacher/staff: delete a quiz attempt (and unclaimed/failed skill badges for that attempt).
+    Blocked if a Solana badge for this attempt is already claimed.
+    """
+    attempt = get_object_or_404(
+        QuizAttempt.objects.select_related("quiz", "quiz__course"),
+        pk=attempt_id,
+    )
+    if not user_can_delete_quiz_attempt(request.user, attempt):
+        return HttpResponseForbidden()
+
+    try:
+        from solana_badges.models import SkillBadge
+    except ImportError:
+        SkillBadge = None  # type: ignore
+
+    if SkillBadge is not None:
+        badges = SkillBadge.objects.filter(quiz_attempt=attempt)
+        if badges.filter(status=SkillBadge.Status.CLAIMED).exists():
+            messages.error(
+                request,
+                "This attempt has a claimed Solana badge and cannot be deleted.",
+            )
+            return redirect("accounts:admin_panel")
+        with transaction.atomic():
+            badges.delete()
+            attempt.delete()
+    else:
+        with transaction.atomic():
+            attempt.delete()
+
+    messages.success(request, "Quiz attempt removed.")
     return redirect("accounts:admin_panel")

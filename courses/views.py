@@ -28,7 +28,6 @@ class CourseDetailView(LoginRequiredMixin, DetailView):
                 "videos",
                 "videos__sections",
                 "quizzes",
-                "ar_tasks",
             )
             .select_related("created_by")
             .all()

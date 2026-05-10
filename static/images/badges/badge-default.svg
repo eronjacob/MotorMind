@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="Badge">
+  <defs>
+    <linearGradient id="bdG" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFBF66"/>
+      <stop offset="100%" style="stop-color:#CC6A00"/>
+    </linearGradient>
+    <linearGradient id="bdBg" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#1a1a1a"/>
+      <stop offset="100%" style="stop-color:#252a30"/>
+    </linearGradient>
+  </defs>
+  <circle cx="60" cy="60" r="54" fill="url(#bdBg)" stroke="url(#bdG)" stroke-width="4"/>
+  <path d="M60 28 C44 28 32 40 32 54 L32 72 L60 88 L88 72 L88 54 C88 40 76 28 60 28 Z" fill="none" stroke="#FFBF66" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M48 54 L56 62 L74 44" fill="none" stroke="#FFD700" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

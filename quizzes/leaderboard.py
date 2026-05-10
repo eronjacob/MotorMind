@@ -1,11 +1,12 @@
 """
 Leaderboard rankings for a quiz.
 
-Rankings use each user's *best* attempt only (highest correct_answers; ties broken by
-faster completion_time_seconds, then earlier created_at).
+Rankings use each user's *best* attempt only. Comparable score uses
+``correct_answers / total_questions`` when ``total_questions > 0`` (new attempts),
+otherwise falls back to ``score`` (percentage) so legacy attempts still compete on
+the same quiz leaderboard.
 
-The leaderboard is derived from ``QuizAttempt`` rows — no separate table. Saving a new
-attempt automatically changes computed ranks.
+Tie-break: faster ``completion_time_seconds``, then earlier ``created_at``.
 """
 
 from __future__ import annotations
@@ -30,10 +31,13 @@ class LeaderboardRow:
     total_questions: int
     completion_time_seconds: int | None
     completed_at: datetime
+    attempt_score: int
 
     @property
     def score_label(self) -> str:
-        return f"{self.correct_answers}/{self.total_questions}"
+        if self.total_questions:
+            return f"{self.correct_answers}/{self.total_questions}"
+        return f"{self.attempt_score}%"
 
     @property
     def time_display(self) -> str:
@@ -65,6 +69,7 @@ def _row_from_cursor(columns: list[str], row: tuple[Any, ...]) -> LeaderboardRow
             else None
         ),
         completed_at=data["created_at"],
+        attempt_score=int(data["attempt_score"]),
     )
 
 
@@ -76,6 +81,12 @@ def fetch_leaderboard_for_quiz(quiz_id: int) -> list[LeaderboardRow]:
     user_table = qn(User._meta.db_table)
     username_field = qn(User.USERNAME_FIELD)
 
+    rank_a = """(
+            CASE WHEN a.total_questions > 0
+                 THEN CAST(a.correct_answers AS REAL) / a.total_questions
+                 ELSE CAST(a.score AS REAL) / 100.0
+            END)"""
+
     sql = f"""
         WITH best_per_user AS (
             SELECT
@@ -85,16 +96,16 @@ def fetch_leaderboard_for_quiz(quiz_id: int) -> list[LeaderboardRow]:
                 a.total_questions,
                 a.completion_time_seconds,
                 a.created_at,
+                a.score AS attempt_score,
                 ROW_NUMBER() OVER (
                     PARTITION BY a.student_id
                     ORDER BY
-                        a.correct_answers DESC,
+                        {rank_a} DESC,
                         a.completion_time_seconds ASC NULLS LAST,
                         a.created_at ASC
                 ) AS user_best_rn
             FROM quizzes_quizattempt a
             WHERE a.quiz_id = %s
-              AND a.total_questions > 0
         ),
         ranked AS (
             SELECT
@@ -104,9 +115,13 @@ def fetch_leaderboard_for_quiz(quiz_id: int) -> list[LeaderboardRow]:
                 b.total_questions,
                 b.completion_time_seconds,
                 b.created_at,
+                b.attempt_score,
                 ROW_NUMBER() OVER (
                     ORDER BY
-                        b.correct_answers DESC,
+                        (CASE WHEN b.total_questions > 0
+                              THEN CAST(b.correct_answers AS REAL) / b.total_questions
+                              ELSE CAST(b.attempt_score AS REAL) / 100.0
+                         END) DESC,
                         b.completion_time_seconds ASC NULLS LAST,
                         b.created_at ASC
                 ) AS leaderboard_rank
@@ -121,7 +136,8 @@ def fetch_leaderboard_for_quiz(quiz_id: int) -> list[LeaderboardRow]:
             r.correct_answers,
             r.total_questions,
             r.completion_time_seconds,
-            r.created_at
+            r.created_at,
+            r.attempt_score
         FROM ranked r
         JOIN {user_table} u ON u.{qn(User._meta.pk.column)} = r.student_id
         ORDER BY r.leaderboard_rank

@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Profile — {{ user.username }} — MotorMind{% endblock %}
+
+{% block extra_head %}
+<style>
+  .badge-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1rem;
+  }
+  .skill-card {
+    border-radius: 0.75rem;
+    border: 1px solid var(--border-light, #dee2e6);
+    transition: box-shadow 0.2s ease, transform 0.15s ease;
+    background: #fff;
+  }
+  .skill-card:hover {
+    box-shadow: var(--shadow-hover, 0 8px 40px rgba(0,0,0,0.12));
+    transform: translateY(-2px);
+  }
+  .skill-card.claimable {
+    opacity: 0.92;
+    border-style: dashed;
+  }
+  .skill-card.claimed {
+    border-color: #ffb347;
+    box-shadow: 0 2px 12px rgba(255, 140, 0, 0.15);
+  }
+  .skill-card-icon {
+    width: 72px;
+    height: 72px;
+    object-fit: contain;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="pt-4">
+  <ol class="breadcrumb mb-0">
+    <li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+    <li class="breadcrumb-item active">Profile</li>
+  </ol>
+</nav>
+
+<h1 class="h3 mb-4 pt-2">Profile — {{ user.username }}</h1>
+
+<div class="row g-4">
+  <div class="col-lg-4">
+    <div class="card shadow-sm h-100">
+      <div class="card-header fw-semibold">Summary</div>
+      <div class="card-body small">
+        <dl class="row mb-0">
+          <dt class="col-5 text-muted">Username</dt>
+          <dd class="col-7">{{ user.username }}</dd>
+          <dt class="col-5 text-muted">Role</dt>
+          <dd class="col-7">{{ user_role_display }}</dd>
+          <dt class="col-5 text-muted">Joined</dt>
+          <dd class="col-7">{{ user.date_joined|date:"M j, Y" }}</dd>
+          <dt class="col-5 text-muted">Wallet</dt>
+          <dd class="col-7 text-break">{{ wallet_profile.wallet_address|default:"—" }}</dd>
+        </dl>
+        <hr>
+        <form method="post" action="{% url 'solana_badges:profile_wallet' %}" class="mt-2">
+          {% csrf_token %}
+          <label class="form-label small mb-1" for="id_wallet_profile">Solana Devnet address</label>
+          <input class="form-control form-control-sm mb-2" id="id_wallet_profile" name="wallet_address" type="text"
+                 value="{{ wallet_profile.wallet_address }}" placeholder="Save wallet for claims" autocomplete="off">
+          <div class="form-text mb-2">Use a Solana Devnet wallet for demo purposes.</div>
+          <button type="submit" class="btn btn-sm btn-primary">Save wallet</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-8">
+    {% if show_solana_ops and solana_issuer_diag %}
+    <div class="card border-secondary mb-4">
+      <div class="card-header py-2 small fw-semibold">Solana Devnet status (teacher / admin)</div>
+      <div class="card-body small py-2">
+        <dl class="row mb-0">
+          <dt class="col-sm-4 text-muted">Configured</dt>
+          <dd class="col-sm-8">{% if solana_issuer_diag.configured %}Yes{% else %}No{% endif %}</dd>
+          <dt class="col-sm-4 text-muted">Issuer public key</dt>
+          <dd class="col-sm-8 text-break font-monospace">{{ solana_issuer_diag.pubkey|default:"—" }}</dd>
+          <dt class="col-sm-4 text-muted">Issuer balance</dt>
+          <dd class="col-sm-8">{% if solana_issuer_diag.balance_sol is not None %}{{ solana_issuer_diag.balance_sol }} SOL{% else %}—{% endif %}</dd>
+          <dt class="col-sm-4 text-muted">Badge claims</dt>
+          <dd class="col-sm-8">{% if solana_issuer_diag.ready %}<span class="text-success fw-semibold">Ready</span>{% else %}<span class="text-warning fw-semibold">Not ready</span>{% endif %}</dd>
+        </dl>
+        <p class="text-muted mb-0 mt-2 small">{{ solana_issuer_diag.message }}</p>
+        <p class="mb-0 mt-2"><code class="small">python manage.py check_solana_badges</code></p>
+      </div>
+    </div>
+    {% endif %}
+    <div class="card shadow-sm mb-4">
+      <div class="card-header fw-semibold">Quiz progress</div>
+      <div class="card-body">
+        <p class="mb-2"><strong>{{ passed_quiz_count }}</strong> quizzes passed
+          {% if avg_passed_score is not None %}
+            · average score <strong>{{ avg_passed_score }}%</strong> (passed attempts)
+          {% endif %}
+        </p>
+        <h2 class="h6 text-muted mb-2">Latest attempts</h2>
+        <ul class="list-group list-group-flush small">
+          {% for a in latest_attempts %}
+            <li class="list-group-item d-flex justify-content-between flex-wrap gap-2">
+              <span>{{ a.quiz.title }} — {{ a.score }}% {% if a.passed %}<span class="text-success">pass</span>{% else %}<span class="text-muted">retry</span>{% endif %}</span>
+              <span class="text-muted">{{ a.created_at|date:"M j, Y" }}</span>
+            </li>
+          {% empty %}
+            <li class="list-group-item text-muted">No attempts yet.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+      <h2 class="h5 mb-0">Badge gallery</h2>
+      <a class="btn btn-sm btn-outline-secondary" href="{% url 'solana_badges:global_leaderboard' %}">Site leaderboard</a>
+    </div>
+    <div class="badge-gallery mb-4">
+      {% for b in badges_all %}
+        <div class="skill-card p-3 {% if b.status == 'claimable' or b.status == 'failed' %}claimable{% elif b.status == 'claimed' %}claimed{% endif %}">
+          <div class="d-flex gap-3">
+            <img class="skill-card-icon flex-shrink-0" src="{% static b.icon_static_path %}" alt="">
+            <div class="min-w-0">
+              <div class="fw-semibold small">{{ b.title }}</div>
+              <div class="text-muted small text-break">{{ b.description|truncatechars:90 }}</div>
+              {% if b.quiz %}<div class="small mt-1">Quiz: {{ b.quiz.title }}</div>{% endif %}
+              {% if b.score is not None %}<div class="small">Score: {{ b.score }}%</div>{% endif %}
+              <div class="mt-2">
+                <span class="badge {% if b.status == 'claimed' %}bg-success{% elif b.status == 'failed' %}bg-danger{% else %}bg-secondary{% endif %}">{{ b.get_status_display }}</span>
+                {% if b.claimed_at %}<span class="small text-muted ms-1">{{ b.claimed_at|date:"M j, Y" }}</span>{% endif %}
+              </div>
+              {% if b.explorer_url %}
+                <a class="btn btn-sm btn-outline-primary mt-2" href="{{ b.explorer_url }}" target="_blank" rel="noopener">Explorer</a>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      {% empty %}
+        <p class="text-muted small">No badges yet — pass a quiz to earn a claimable badge.</p>
+      {% endfor %}
+    </div>
+
+    {% if badges_claimable %}
+    <h2 class="h6 text-muted mb-2">Claimable</h2>
+    <p class="small text-muted mb-3">Open the quiz result page for that attempt to claim on Devnet.</p>
+    {% endif %}
+
+    {% if badges_failed_recent %}
+    <h2 class="h6 text-danger mb-2">Recent claim issues</h2>
+    <ul class="small">
+      {% for b in badges_failed_recent %}
+        <li>{{ b.title }} — {{ b.error_message|truncatechars:120 }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

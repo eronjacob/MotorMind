@@ -10,7 +10,7 @@ urlpatterns = [
     path("", include("accounts.urls")),
     path("", include("courses.urls")),
     path("", include("quizzes.urls")),
-    path("", include("ar_tasks.urls")),
+    path("", include("solana_badges.urls")),
     path("admin-panel/resources/", include("resources.urls")),
     path("admin-panel/", include("study_content.urls")),
 ]

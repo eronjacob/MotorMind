@@ -83,7 +83,7 @@
           <h4 class="mb-0">Welcome to MotorMind</h4>
         </div>
         <div class="card-body">
-          <form method="post" novalidate action="">
+          <form method="post" novalidate action="{% url 'accounts:login' %}">
             {% csrf_token %}
             {% if next %}
               <input type="hidden" name="next" value="{{ next }}">

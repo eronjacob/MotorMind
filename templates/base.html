@@ -450,6 +450,7 @@
         {% if user.is_authenticated %}
           <li class="nav-item"><a class="nav-link fw-bold" href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
           <li class="nav-item"><a class="nav-link fw-bold" href="{% url 'courses:course_list' %}">Courses</a></li>
+          <li class="nav-item"><a class="nav-link fw-bold" href="{% url 'solana_badges:global_leaderboard' %}">Leaderboard</a></li>
           {% if user.is_staff or user_profile and user_profile.role == 'teacher' %}
             <li class="nav-item"><a class="nav-link fw-bold" href="{% url 'accounts:admin_panel' %}">Admin panel</a></li>
           {% endif %}
@@ -457,7 +458,9 @@
       </ul>
       <ul class="navbar-nav ms-auto align-items-lg-center">
         {% if user.is_authenticated %}
-          <li class="nav-item d-flex align-items-center"><span class="navbar-text me-3 text-muted">{{ user.username }}</span></li>
+          <li class="nav-item d-flex align-items-center">
+            <a class="navbar-text me-3 text-muted text-decoration-none link-dealer" href="{% url 'solana_badges:profile' %}">{{ user.username }}</a>
+          </li>
           <li class="nav-item">
             <form method="post" action="{% url 'accounts:logout' %}" class="d-inline">
               {% csrf_token %}
@@ -473,10 +476,10 @@
 </nav>
 
 <!-- Main content -->
-<main class="{% block main_classes %}container pb-5 flex-grow-1{% endblock %}">
+<main class="{% block main_classes %}container pb-5 flex-grow-1 pt-4{% endblock %}">
   {% if messages %}
     {% for message in messages %}
-      <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+      <div class="alert alert-{{ message.tags }} alert-dismissible fade show mb-3" role="alert">
         {{ message }}
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
       </div>

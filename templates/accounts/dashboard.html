@@ -57,27 +57,6 @@
     </div>
   </div>
 
-  <div class="card shadow-sm mt-3">
-    <div class="card-header fw-semibold">Recent AR task progress</div>
-    <div class="table-responsive">
-      <table class="table table-sm mb-0">
-        <thead><tr><th>Student</th><th>Task</th><th>Status</th><th>Updated</th></tr></thead>
-        <tbody>
-          {% for p in recent_ar_progress %}
-            <tr>
-              <td>{{ p.student.username }}</td>
-              <td>{{ p.task.title }}</td>
-              <td>{{ p.get_status_display }}</td>
-              <td class="small">{{ p.updated_at }}</td>
-            </tr>
-          {% empty %}
-            <tr><td colspan="4" class="text-muted">No progress yet.</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
-
 {% else %}
   <p class="text-muted">Your learning overview.</p>
   <div class="row g-3">
@@ -108,20 +87,6 @@
             </li>
           {% empty %}
             <li class="list-group-item text-muted">No quiz attempts yet.</li>
-          {% endfor %}
-        </ul>
-      </div>
-      <div class="card shadow-sm">
-        <div class="card-header fw-semibold">AR tasks</div>
-        <ul class="list-group list-group-flush small">
-          {% for p in my_ar_progress %}
-            <li class="list-group-item d-flex justify-content-between">
-              <span>{{ p.task.title }} — {{ p.get_status_display }}</span>
-              <a class="btn btn-sm btn-outline-primary"
-                 href="{% url 'ar_tasks:task_detail' p.task.course_id p.task_id %}">Open</a>
-            </li>
-          {% empty %}
-            <li class="list-group-item text-muted">No AR progress yet.</li>
           {% endfor %}
         </ul>
       </div>

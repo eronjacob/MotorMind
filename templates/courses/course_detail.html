@@ -190,23 +190,6 @@
   </ul>
 </div>
 
-<div class="card shadow-sm mt-4">
-  <div class="card-header fw-semibold">AR practical tasks</div>
-  <ul class="list-group list-group-flush">
-    {% for t in course.ar_tasks.all %}
-      <li class="list-group-item d-flex justify-content-between align-items-center">
-        <div>
-          <strong>{{ t.title }}</strong>
-          <div class="small text-muted">{{ t.get_target_object_display }} · {{ t.get_difficulty_display }}</div>
-        </div>
-        <a class="btn btn-sm btn-outline-primary" href="{% url 'ar_tasks:task_detail' course.pk t.pk %}">Open task</a>
-      </li>
-    {% empty %}
-      <li class="list-group-item text-muted">No AR tasks yet.</li>
-    {% endfor %}
-  </ul>
-</div>
-
 <div id="course-tutor-config" class="d-none"
      data-course-id="{{ course.pk }}"
      data-message-url="{% url 'courses:course_tutor_message' course.pk %}"
