@@ -1,8 +1,3 @@
-<!-- Add your mockup right here! -->
-<p align="center">
-  <img src="assets/motormind-mockup.png" alt="MotorMind Responsive UI Mockup" width="800">
-</p>
-
 # MotorMind
 
 MotorMind is an **automotive electronics education** prototype built with **Django** and **Django REST Framework**. Teachers manage **courses** (with optional icons), **training videos** (transcripts, paragraph timestamps, **learning sections**), **quizzes** and a **resource library** with vector search. Students browse courses, watch embedded video with section-based navigation, take quizzes (with leaderboards and optional **Solana Devnet** skill badges) and use an **AI tutor** on each course page.
