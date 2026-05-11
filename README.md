@@ -3,7 +3,7 @@
 ### Automotive Electronics Learning Platform Built with Django
 
 <p align="center">
-  <img src="assets/motormind-mockup.png" alt="MotorMind Screenshot" width="900">
+  <img src="assets/motormind-mockup.png" alt="MotorMind Screenshot" width="1000">
 </p>
 
 <p align="center">
