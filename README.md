@@ -1,6 +1,6 @@
 <!-- Add your mockup right here! -->
 <p align="center">
-  <img src="docs/motormind-mockup.png" alt="MotorMind Responsive UI Mockup" width="800">
+  <img src="assets/motormind-mockup.png" alt="MotorMind Responsive UI Mockup" width="800">
 </p>
 
 # MotorMind
